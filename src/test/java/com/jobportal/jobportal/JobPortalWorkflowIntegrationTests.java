@@ -1,0 +1,1117 @@
+package com.jobportal.jobportal;
+
+import static org.hamcrest.Matchers.empty;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
+
+import com.jobportal.model.Application;
+import com.jobportal.model.CompanyProfile;
+import com.jobportal.model.Job;
+import com.jobportal.model.Profile;
+import com.jobportal.model.SavedJob;
+import com.jobportal.model.User;
+import com.jobportal.model.UserRole;
+import com.jobportal.repository.ApplicationRepository;
+import com.jobportal.repository.CompanyProfileRepository;
+import com.jobportal.repository.JobRepository;
+import com.jobportal.repository.ProfileRepository;
+import com.jobportal.repository.SavedJobRepository;
+import com.jobportal.repository.UserRepository;
+import com.jobportal.services.ProfileService;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@TestPropertySource(properties = "app.upload.dir=target/test-uploads/resumes")
+class JobPortalWorkflowIntegrationTests {
+
+    private static final String TEST_MARKER = "mockmvc-";
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private JobRepository jobRepository;
+
+    @Autowired
+    private ApplicationRepository applicationRepository;
+
+    @Autowired
+    private SavedJobRepository savedJobRepository;
+
+    @Autowired
+    private ProfileRepository profileRepository;
+
+    @Autowired
+    private CompanyProfileRepository companyProfileRepository;
+
+    @Autowired
+    private ProfileService profileService;
+
+    private final List<Long> createdUserIds = new ArrayList<>();
+    private final List<Long> createdJobIds = new ArrayList<>();
+    private final List<Long> createdApplicationIds = new ArrayList<>();
+
+    private String testRunId;
+
+    @BeforeEach
+    void setUp() {
+        testRunId = TEST_MARKER + UUID.randomUUID();
+    }
+
+    @AfterEach
+    void cleanUp() throws IOException {
+        for (Long applicationId : createdApplicationIds) {
+            applicationRepository.deleteById(applicationId);
+        }
+        for (Long userId : createdUserIds) {
+            savedJobRepository.findByUserIdOrderBySavedAtDesc(userId)
+                    .forEach(savedJob -> savedJobRepository.deleteById(savedJob.getId()));
+        }
+        for (Long jobId : createdJobIds) {
+            jobRepository.deleteById(jobId);
+        }
+        for (Long userId : createdUserIds) {
+            Profile profile = profileRepository.findByUserId(userId).orElse(null);
+            if (profile != null) {
+                if (profile.getResumePath() != null) {
+                    profileService.deleteResume(profile.getResumePath());
+                }
+                profileRepository.delete(profile);
+            }
+            companyProfileRepository.findByUserId(userId).ifPresent(companyProfileRepository::delete);
+            userRepository.deleteById(userId);
+        }
+    }
+
+    @Test
+    void hrCanCreateReadUpdateAndDeleteCompanyProfile() throws Exception {
+        User hr = createUser("company-profile-hr", UserRole.HR);
+
+        mockMvc.perform(post("/hr/company-profile")
+                        .session(sessionFor(hr))
+                        .param("companyName", "Madhav Technologies")
+                        .param("industry", "Information Technology")
+                        .param("location", "Bangalore")
+                        .param("companySize", "11-50 employees")
+                        .param("foundedYear", "2012")
+                        .param("contactEmail", "hr@example.com")
+                        .param("website", "https://www.example.com")
+                        .param("address", "Green Valley")
+                        .param("description", "Software and technology solutions."))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/hr/company-profile"))
+                .andExpect(flash().attribute("message", "Company profile saved successfully."));
+
+        CompanyProfile profile = companyProfileRepository.findByUserId(hr.getId()).orElseThrow();
+        Long profileId = profile.getId();
+        assertEquals(hr.getId(), profile.getUserId());
+        assertEquals("Madhav Technologies", profile.getCompanyName());
+        assertEquals("Information Technology", profile.getIndustry());
+        assertEquals("Bangalore", profile.getLocation());
+
+        mockMvc.perform(get("/hr/company-profile").session(sessionFor(hr)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("company-profile"))
+                .andExpect(contentContains("Madhav Technologies"))
+                .andExpect(contentContains("Information Technology"));
+
+        mockMvc.perform(post("/hr/company-profile")
+                        .session(sessionFor(hr))
+                        .param("companyName", "Madhav Technologies Pvt Ltd")
+                        .param("industry", "Software")
+                        .param("location", "Delhi")
+                        .param("companySize", "51-200 employees")
+                        .param("foundedYear", "2013")
+                        .param("contactEmail", "updated@example.com")
+                        .param("website", "https://www.updated.example.com")
+                        .param("address", "Updated Address")
+                        .param("description", "Updated company description."))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/hr/company-profile"))
+                .andExpect(flash().attribute("message", "Company profile saved successfully."));
+
+        CompanyProfile updatedProfile = companyProfileRepository.findByUserId(hr.getId()).orElseThrow();
+        assertEquals(profileId, updatedProfile.getId());
+        assertEquals("Madhav Technologies Pvt Ltd", updatedProfile.getCompanyName());
+        assertEquals("Software", updatedProfile.getIndustry());
+        assertEquals("Delhi", updatedProfile.getLocation());
+        assertEquals(1, companyProfileRepository.findAll().stream()
+                .filter(companyProfile -> hr.getId().equals(companyProfile.getUserId()))
+                .count());
+
+        mockMvc.perform(post("/hr/company-profile/delete").session(sessionFor(hr)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/hr/company-profile"))
+                .andExpect(flash().attribute("message", "Company profile deleted successfully."));
+
+        assertTrue(companyProfileRepository.findByUserId(hr.getId()).isEmpty());
+    }
+
+    @Test
+    void companyProfileIsRestrictedToHrUsers() throws Exception {
+        User hr = createUser("company-profile-access-hr", UserRole.HR);
+        User seeker = createUser("company-profile-access-seeker", UserRole.JOB_SEEKER);
+        User admin = createUser("company-profile-access-admin", UserRole.ADMIN);
+
+        mockMvc.perform(get("/hr/company-profile").session(sessionFor(seeker)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard"));
+        mockMvc.perform(post("/hr/company-profile")
+                        .session(sessionFor(seeker))
+                        .param("companyName", "Should Not Save"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard"));
+        mockMvc.perform(post("/hr/company-profile/delete").session(sessionFor(seeker)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard"));
+
+        mockMvc.perform(get("/hr/company-profile").session(sessionFor(admin)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/dashboard"));
+        mockMvc.perform(post("/hr/company-profile")
+                        .session(sessionFor(admin))
+                        .param("companyName", "Should Not Save"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/dashboard"));
+        mockMvc.perform(post("/hr/company-profile/delete").session(sessionFor(admin)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/dashboard"));
+
+        mockMvc.perform(get("/hr/company-profile"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+        mockMvc.perform(post("/hr/company-profile")
+                        .param("companyName", "Should Not Save"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+        mockMvc.perform(post("/hr/company-profile/delete"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+
+        assertTrue(companyProfileRepository.findByUserId(hr.getId()).isEmpty());
+        assertTrue(companyProfileRepository.findByUserId(seeker.getId()).isEmpty());
+        assertTrue(companyProfileRepository.findByUserId(admin.getId()).isEmpty());
+    }
+
+    @Test
+    void eachHrOwnsOnlyTheirCompanyProfile() throws Exception {
+        User hrA = createUser("company-profile-owner-a", UserRole.HR);
+        User hrB = createUser("company-profile-owner-b", UserRole.HR);
+
+        mockMvc.perform(post("/hr/company-profile")
+                        .session(sessionFor(hrA))
+                        .param("companyName", "Company A"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/hr/company-profile"));
+
+        mockMvc.perform(post("/hr/company-profile")
+                        .session(sessionFor(hrB))
+                        .param("companyName", "Company B"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/hr/company-profile"));
+
+        CompanyProfile profileA = companyProfileRepository.findByUserId(hrA.getId()).orElseThrow();
+        CompanyProfile profileB = companyProfileRepository.findByUserId(hrB.getId()).orElseThrow();
+
+        assertEquals("Company A", profileA.getCompanyName());
+        assertEquals("Company B", profileB.getCompanyName());
+        assertTrue(!profileA.getId().equals(profileB.getId()));
+
+        mockMvc.perform(get("/hr/company-profile").session(sessionFor(hrA)))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("Company A"))
+                .andExpect(contentDoesNotContain("Company B"));
+
+        mockMvc.perform(get("/hr/company-profile").session(sessionFor(hrB)))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("Company B"))
+                .andExpect(contentDoesNotContain("Company A"));
+    }
+
+    @Test
+    void blankCompanyNameIsRejected() throws Exception {
+        User hr = createUser("company-profile-validation-hr", UserRole.HR);
+
+        mockMvc.perform(post("/hr/company-profile")
+                        .session(sessionFor(hr))
+                        .param("companyName", "   "))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/hr/company-profile"))
+                .andExpect(flash().attribute("error", "Company name cannot be blank."));
+
+        assertTrue(companyProfileRepository.findByUserId(hr.getId()).isEmpty());
+    }
+
+    @Test
+    void deleteMissingCompanyProfileShowsError() throws Exception {
+        User hr = createUser("company-profile-delete-missing-hr", UserRole.HR);
+
+        mockMvc.perform(post("/hr/company-profile/delete").session(sessionFor(hr)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/hr/company-profile"))
+                .andExpect(flash().attribute("error", "Company profile not found."));
+    }
+
+    @Test
+    void authenticatedHrCanCreateJobAndPublicJobsShowIt() throws Exception {
+        User hr = createUser("hr", UserRole.HR);
+
+        mockMvc.perform(post("/hr/jobs")
+                        .session(sessionFor(hr))
+                        .param("title", testRunId + " Java Engineer")
+                        .param("company", "MockMvc Labs")
+                        .param("location", "Remote")
+                        .param("jobType", "Full-time")
+                        .param("salary", "USD 120000")
+                        .param("experience", "3-5 years")
+                        .param("skills", "Java, Spring Boot")
+                        .param("description", "Build reliable services.")
+                        .param("applicationDeadline", "2030-12-31"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/hr/dashboard"));
+
+        Job job = findJobOwnedBy(hr, testRunId + " Java Engineer");
+        assertNotNull(job);
+        createdJobIds.add(job.getId());
+        assertEquals("MockMvc Labs", job.getCompany());
+        assertEquals("Remote", job.getLocation());
+        assertEquals("Build reliable services.", job.getDescription());
+        assertEquals("3-5 years", job.getExperience());
+        assertEquals(hr.getId(), job.getOwnerId());
+        assertEquals("ACTIVE", job.getStatus());
+
+        mockMvc.perform(get("/jobs"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("jobs"))
+                .andExpect(contentContains(job.getTitle()))
+                .andExpect(contentContains("MockMvc Labs"));
+    }
+
+    @Test
+    void publicJobsWithoutKeywordReturnActiveJobs() throws Exception {
+        User hr = createUser("browse-jobs-hr", UserRole.HR);
+        Job job = createJob(hr, "Browse all jobs");
+
+        mockMvc.perform(get("/jobs"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("jobs"))
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobSearchReturnsJavaMatches() throws Exception {
+        User hr = createUser("java-search-hr", UserRole.HR);
+        Job job = createJob(hr, "Java search role");
+
+        mockMvc.perform(get("/jobs").param("keyword", "Java"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("jobs"))
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobSearchIsCaseInsensitive() throws Exception {
+        User hr = createUser("lowercase-search-hr", UserRole.HR);
+        Job job = createJob(hr, "Java lowercase search role");
+
+        mockMvc.perform(get("/jobs").param("keyword", "java"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobSearchMatchesLocation() throws Exception {
+        User hr = createUser("location-search-hr", UserRole.HR);
+        Job job = createJob(hr, "Bangalore location search role");
+        job.setLocation("Bangalore");
+        jobRepository.save(job);
+
+        mockMvc.perform(get("/jobs").param("keyword", "Bangalore"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobLocationFilterMatchesBangalore() throws Exception {
+        Job job = createBangaloreLocationSearchJob("location-exact-hr", "Bangalore location filter role");
+
+        mockMvc.perform(get("/jobs").param("location", "Bangalore"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobLocationFilterIsCaseInsensitiveForLowercase() throws Exception {
+        Job job = createBangaloreLocationSearchJob("location-lowercase-hr", "lowercase location filter role");
+
+        mockMvc.perform(get("/jobs").param("location", "bangalore"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobLocationFilterIsCaseInsensitiveForUppercase() throws Exception {
+        Job job = createBangaloreLocationSearchJob("location-uppercase-hr", "uppercase location filter role");
+
+        mockMvc.perform(get("/jobs").param("location", "BANGALORE"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobLocationFilterSupportsPartialMatches() throws Exception {
+        Job job = createBangaloreLocationSearchJob("location-partial-hr", "partial location filter role");
+
+        mockMvc.perform(get("/jobs").param("location", "Bang"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobLocationFilterShowsNoResultsForUnknownLocation() throws Exception {
+        mockMvc.perform(get("/jobs").param("location", "doesnotexist123"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("No jobs found matching your search."));
+    }
+
+    @Test
+    void publicJobSearchShowsNoResultsMessage() throws Exception {
+        mockMvc.perform(get("/jobs").param("keyword", "doesnotexist123"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("No jobs found matching your search."));
+    }
+
+    @Test
+    void publicJobFiltersCombineKeywordAndLocation() throws Exception {
+        User hr = createUser("combined-filter-hr", UserRole.HR);
+        Job matchingJob = createJobWithDetails(hr, "Combined filter result", "Filter Co", "Bangalore",
+                "3 years", "Full-time", "USD 100000", "Java, Spring Boot", LocalDate.of(2026, 1, 1));
+        Job excludedJob = createJobWithDetails(hr, "Combined filter excluded", "Filter Co", "Remote",
+                "3 years", "Full-time", "USD 100000", "Java, Spring Boot", LocalDate.of(2026, 1, 1));
+
+        mockMvc.perform(get("/jobs").param("keyword", "java").param("location", "Bangalore"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(matchingJob.getTitle()))
+                .andExpect(contentDoesNotContain(excludedJob.getTitle()));
+    }
+
+    @Test
+    void publicJobFiltersByCompany() throws Exception {
+        User hr = createUser("company-filter-hr", UserRole.HR);
+        Job matchingJob = createJobWithDetails(hr, "Company filter result", "Northwind Labs", "Remote",
+                "2 years", "Full-time", "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+        Job excludedJob = createJobWithDetails(hr, "Company filter excluded", "Other Labs", "Remote",
+                "2 years", "Full-time", "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+
+        mockMvc.perform(get("/jobs").param("company", "northwind"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(matchingJob.getTitle()))
+                .andExpect(contentDoesNotContain(excludedJob.getTitle()));
+    }
+
+    @Test
+    void publicJobFiltersByExperience() throws Exception {
+        User hr = createUser("experience-filter-hr", UserRole.HR);
+        Job matchingJob = createJobWithDetails(hr, "Experience filter result", "Filter Co", "Remote",
+                "5 years", "Full-time", "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+        Job excludedJob = createJobWithDetails(hr, "Experience filter excluded", "Filter Co", "Remote",
+                "1 year", "Full-time", "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+
+        mockMvc.perform(get("/jobs").param("experience", "5 years"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(matchingJob.getTitle()))
+                .andExpect(contentDoesNotContain(excludedJob.getTitle()));
+    }
+
+    @Test
+    void publicJobExperienceFilterMatchesExactValue() throws Exception {
+        Job job = createExperienceSearchJob("experience-exact-hr", "exact experience filter role");
+
+        mockMvc.perform(get("/jobs").param("experience", "2-4 years"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobExperienceFilterIsCaseInsensitive() throws Exception {
+        Job job = createExperienceSearchJob("experience-case-hr", "case-insensitive experience filter role");
+
+        mockMvc.perform(get("/jobs").param("experience", "2-4 YEARS"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobExperienceFilterSupportsPartialMatches() throws Exception {
+        Job job = createExperienceSearchJob("experience-partial-hr", "partial experience filter role");
+
+        mockMvc.perform(get("/jobs").param("experience", "2-4"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobExperienceFilterShowsNoResultsForUnknownValue() throws Exception {
+        mockMvc.perform(get("/jobs").param("experience", "doesnotexist123"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("No jobs found matching your search."));
+    }
+
+    @Test
+    void publicJobExperienceFilterCombinesWithKeyword() throws Exception {
+        Job job = createExperienceSearchJob("experience-keyword-hr", "Java experience filter role");
+
+        mockMvc.perform(get("/jobs").param("keyword", "java").param("experience", "2-4 years"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(job.getTitle()));
+    }
+
+    @Test
+    void publicJobFiltersByJobType() throws Exception {
+        User hr = createUser("job-type-filter-hr", UserRole.HR);
+        Job matchingJob = createJobWithDetails(hr, "Job type filter result", "Filter Co", "Remote",
+                "2 years", "Contract", "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+        Job excludedJob = createJobWithDetails(hr, "Job type filter excluded", "Filter Co", "Remote",
+                "2 years", "Full-time", "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+
+        mockMvc.perform(get("/jobs").param("jobType", "contract"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(matchingJob.getTitle()))
+                .andExpect(contentDoesNotContain(excludedJob.getTitle()));
+    }
+
+    @Test
+    void publicJobFiltersBySalaryRange() throws Exception {
+        User hr = createUser("salary-filter-hr", UserRole.HR);
+        Job matchingJob = createJobWithDetails(hr, "Salary filter result", "Filter Co", "Remote",
+                "2 years", "Full-time", "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+        Job excludedJob = createJobWithDetails(hr, "Salary filter excluded", "Filter Co", "Remote",
+                "2 years", "Full-time", "USD 150000", "Java", LocalDate.of(2026, 1, 1));
+
+        mockMvc.perform(get("/jobs").param("minSalary", "90000").param("maxSalary", "110000"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(matchingJob.getTitle()))
+                .andExpect(contentDoesNotContain(excludedJob.getTitle()));
+    }
+
+    @Test
+    void publicJobSortsByNewest() throws Exception {
+        User hr = createUser("newest-sort-hr", UserRole.HR);
+        Job olderJob = createJobWithDetails(hr, "Newest sort older", "Sort Co", "Remote", "2 years",
+                "Full-time", "USD 100000", "Java", LocalDate.of(2024, 1, 1));
+        Job newerJob = createJobWithDetails(hr, "Newest sort newer", "Sort Co", "Remote", "2 years",
+                "Full-time", "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+
+        mockMvc.perform(get("/jobs").param("sort", "newest"))
+                .andExpect(status().isOk())
+                .andExpect(contentAppearsBefore(newerJob.getTitle(), olderJob.getTitle()));
+    }
+
+    @Test
+    void publicJobSortsByOldest() throws Exception {
+        User hr = createUser("oldest-sort-hr", UserRole.HR);
+        Job olderJob = createJobWithDetails(hr, "Oldest sort older", "Sort Co", "Remote", "2 years",
+                "Full-time", "USD 100000", "Java", LocalDate.of(2024, 1, 1));
+        Job newerJob = createJobWithDetails(hr, "Oldest sort newer", "Sort Co", "Remote", "2 years",
+                "Full-time", "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+
+        mockMvc.perform(get("/jobs").param("sort", "oldest"))
+                .andExpect(status().isOk())
+                .andExpect(contentAppearsBefore(olderJob.getTitle(), newerJob.getTitle()));
+    }
+
+    @Test
+    void publicJobSortsByTitle() throws Exception {
+        User hr = createUser("title-sort-hr", UserRole.HR);
+        Job alphaJob = createJobWithDetails(hr, "Alpha title sort", "Sort Co", "Remote", "2 years",
+                "Full-time", "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+        Job zuluJob = createJobWithDetails(hr, "Zulu title sort", "Sort Co", "Remote", "2 years",
+                "Full-time", "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+
+        mockMvc.perform(get("/jobs").param("sort", "title"))
+                .andExpect(status().isOk())
+                .andExpect(contentAppearsBefore(alphaJob.getTitle(), zuluJob.getTitle()));
+    }
+
+    @Test
+    void publicJobAppliesMultipleFiltersTogether() throws Exception {
+        User hr = createUser("multi-filter-hr", UserRole.HR);
+        Job matchingJob = createJobWithDetails(hr, "Multiple filters result", "Multi Filter Co", "Bangalore",
+                "7 years", "Contract", "USD 125000", "Kotlin, Spring", LocalDate.of(2026, 1, 1));
+        Job excludedJob = createJobWithDetails(hr, "Multiple filters excluded", "Multi Filter Co", "Bangalore",
+                "7 years", "Contract", "USD 125000", "Java, Spring", LocalDate.of(2026, 1, 1));
+
+        mockMvc.perform(get("/jobs")
+                        .param("keyword", "kotlin")
+                        .param("location", "Bangalore")
+                        .param("company", "Multi Filter Co")
+                        .param("experience", "7 years")
+                        .param("jobType", "Contract")
+                        .param("minSalary", "120000")
+                        .param("maxSalary", "130000"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(matchingJob.getTitle()))
+                .andExpect(contentDoesNotContain(excludedJob.getTitle()));
+    }
+
+    @Test
+    void publicJobsWithEmptyFiltersReturnActiveJobsOnly() throws Exception {
+        User hr = createUser("empty-filter-hr", UserRole.HR);
+        Job activeJob = createJob(hr, "Empty filter active result");
+        Job closedJob = createJob(hr, "Empty filter closed result");
+        closedJob.setStatus("CLOSED");
+        jobRepository.save(closedJob);
+
+        mockMvc.perform(get("/jobs")
+                        .param("keyword", "")
+                        .param("location", "")
+                        .param("company", "")
+                        .param("experience", "")
+                        .param("jobType", "")
+                        .param("minSalary", "")
+                        .param("maxSalary", ""))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(activeJob.getTitle()))
+                .andExpect(contentDoesNotContain(closedJob.getTitle()));
+    }
+
+    @Test
+    void publicJobFiltersShowNoResultsMessageWhenNothingMatches() throws Exception {
+        mockMvc.perform(get("/jobs").param("company", "doesnotexist123"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("No jobs found matching your search."));
+    }
+
+    @Test
+    void seekerCanSaveJobAndSeeSavedStateAndPage() throws Exception {
+        User hr = createUser("saved-job-owner", UserRole.HR);
+        User seeker = createUser("saved-job-seeker", UserRole.JOB_SEEKER);
+        Job job = createJob(hr, "Saved job workflow role");
+
+        mockMvc.perform(get("/jobs/{id}", job.getId()).session(sessionFor(seeker)))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("Save Job"));
+        mockMvc.perform(post("/jobs/{id}/save", job.getId()).session(sessionFor(seeker)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/jobs/" + job.getId()));
+
+        SavedJob savedJob = savedJobRepository.findByUserIdAndJobId(seeker.getId(), job.getId()).orElseThrow();
+        assertNotNull(savedJob.getSavedAt());
+        mockMvc.perform(get("/saved-jobs").session(sessionFor(seeker)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("saved-jobs"))
+                .andExpect(contentContains(job.getTitle()))
+                .andExpect(contentContains("Unsave"));
+        mockMvc.perform(get("/jobs/{id}", job.getId()).session(sessionFor(seeker)))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("Saved — Unsave"));
+    }
+
+    @Test
+    void seekerCanUnsaveJob() throws Exception {
+        User hr = createUser("unsave-owner", UserRole.HR);
+        User seeker = createUser("unsave-seeker", UserRole.JOB_SEEKER);
+        Job job = createJob(hr, "Unsave job role");
+        saveJob(seeker, job);
+
+        mockMvc.perform(post("/jobs/{id}/unsave", job.getId()).session(sessionFor(seeker)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/saved-jobs"));
+
+        assertTrue(savedJobRepository.findByUserIdAndJobId(seeker.getId(), job.getId()).isEmpty());
+    }
+
+    @Test
+    void duplicateSavedJobsArePrevented() throws Exception {
+        User hr = createUser("duplicate-save-owner", UserRole.HR);
+        User seeker = createUser("duplicate-save-seeker", UserRole.JOB_SEEKER);
+        Job job = createJob(hr, "Duplicate saved job role");
+
+        saveJob(seeker, job);
+        saveJob(seeker, job);
+
+        assertEquals(1, savedJobRepository.findByUserIdOrderBySavedAtDesc(seeker.getId()).stream()
+                .filter(savedJob -> job.getId().equals(savedJob.getJobId())).count());
+    }
+
+    @Test
+    void differentSeekersCanSaveTheSameJob() throws Exception {
+        User hr = createUser("shared-save-owner", UserRole.HR);
+        User seekerA = createUser("shared-save-seeker-a", UserRole.JOB_SEEKER);
+        User seekerB = createUser("shared-save-seeker-b", UserRole.JOB_SEEKER);
+        Job job = createJob(hr, "Shared saved job role");
+
+        saveJob(seekerA, job);
+        saveJob(seekerB, job);
+
+        assertTrue(savedJobRepository.existsByUserIdAndJobId(seekerA.getId(), job.getId()));
+        assertTrue(savedJobRepository.existsByUserIdAndJobId(seekerB.getId(), job.getId()));
+    }
+
+    @Test
+    void seekerOnlySeesAndCanUnsaveTheirOwnSavedJobs() throws Exception {
+        User hr = createUser("saved-ownership-owner", UserRole.HR);
+        User seekerA = createUser("saved-ownership-seeker-a", UserRole.JOB_SEEKER);
+        User seekerB = createUser("saved-ownership-seeker-b", UserRole.JOB_SEEKER);
+        Job jobA = createJob(hr, "Seeker A saved role");
+        Job jobB = createJob(hr, "Seeker B saved role");
+        saveJob(seekerA, jobA);
+        saveJob(seekerB, jobB);
+
+        mockMvc.perform(get("/saved-jobs").session(sessionFor(seekerA)))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(jobA.getTitle()))
+                .andExpect(contentDoesNotContain(jobB.getTitle()));
+        mockMvc.perform(post("/jobs/{id}/unsave", jobA.getId()).session(sessionFor(seekerB)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/saved-jobs"));
+
+        assertTrue(savedJobRepository.existsByUserIdAndJobId(seekerA.getId(), jobA.getId()));
+        assertTrue(savedJobRepository.existsByUserIdAndJobId(seekerB.getId(), jobB.getId()));
+    }
+
+    @Test
+    void anonymousUsersCannotUseSavedJobs() throws Exception {
+        User hr = createUser("anonymous-save-owner", UserRole.HR);
+        Job job = createJob(hr, "Anonymous saved job role");
+
+        mockMvc.perform(post("/jobs/{id}/save", job.getId()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+        mockMvc.perform(post("/jobs/{id}/unsave", job.getId()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/saved-jobs"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    void hrAndAdminCannotUseSavedJobs() throws Exception {
+        User owner = createUser("role-save-owner", UserRole.HR);
+        User hr = createUser("role-save-hr", UserRole.HR);
+        User admin = createUser("role-save-admin", UserRole.ADMIN);
+        Job job = createJob(owner, "Role restricted saved job role");
+
+        mockMvc.perform(post("/jobs/{id}/save", job.getId()).session(sessionFor(hr)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/hr/dashboard"));
+        mockMvc.perform(get("/saved-jobs").session(sessionFor(hr)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/hr/dashboard"));
+        mockMvc.perform(post("/jobs/{id}/save", job.getId()).session(sessionFor(admin)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/dashboard"));
+        mockMvc.perform(get("/saved-jobs").session(sessionFor(admin)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/dashboard"));
+
+        assertEquals(0, savedJobRepository.count());
+    }
+
+    @Test
+    void invalidSavedJobTargetIsRejected() throws Exception {
+        User seeker = createUser("invalid-saved-job-seeker", UserRole.JOB_SEEKER);
+
+        mockMvc.perform(post("/jobs/{id}/save", 999999L).session(sessionFor(seeker)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/jobs"));
+
+        assertEquals(0, savedJobRepository.countByUserId(seeker.getId()));
+    }
+
+    @Test
+    void dashboardSavedJobCountReflectsDatabaseRecords() throws Exception {
+        User hr = createUser("saved-count-owner", UserRole.HR);
+        User seeker = createUser("saved-count-seeker", UserRole.JOB_SEEKER);
+        Job firstJob = createJob(hr, "First saved count role");
+        Job secondJob = createJob(hr, "Second saved count role");
+        saveJob(seeker, firstJob);
+        saveJob(seeker, secondJob);
+
+        mockMvc.perform(get("/dashboard").session(sessionFor(seeker)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("dashboard"))
+                .andExpect(model().attribute("savedJobCount", 2L));
+    }
+
+    @Test
+    void seekerCanApplyAndApplicationIsPersisted() throws Exception {
+        User hr = createUser("hr", UserRole.HR);
+        User seeker = createUser("seeker", UserRole.JOB_SEEKER);
+        Job job = createJob(hr, "Application workflow job");
+
+        submitApplication(seeker, job);
+
+        Application application = findApplication(seeker, job);
+        assertNotNull(application);
+        createdApplicationIds.add(application.getId());
+        assertEquals(seeker.getId(), application.getUserId());
+        assertEquals(job.getId(), application.getJobId());
+        assertEquals("APPLIED", application.getStatus());
+    }
+
+    @Test
+    void owningHrCanViewApplicationAndSeekerCanSeeStatusWorkflow() throws Exception {
+        User hr = createUser("hr", UserRole.HR);
+        User seeker = createUser("seeker", UserRole.JOB_SEEKER);
+        Job job = createJob(hr, "Status workflow job");
+        submitApplication(seeker, job);
+        Application application = findApplication(seeker, job);
+        createdApplicationIds.add(application.getId());
+
+        mockMvc.perform(get("/hr/jobs/{id}/applications", job.getId()).session(sessionFor(hr)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("hr-applications"))
+                .andExpect(contentContains(seeker.getEmail()))
+                .andExpect(contentContains(job.getTitle()));
+
+        mockMvc.perform(get("/hr/applications/{id}", application.getId()).session(sessionFor(hr)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("hr-application-details"))
+                .andExpect(contentContains(seeker.getEmail()))
+                .andExpect(contentContains("APPLIED"));
+
+        mockMvc.perform(post("/hr/applications/{id}/status", application.getId())
+                        .session(sessionFor(hr))
+                        .param("status", "SHORTLISTED"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/hr/applications/" + application.getId()));
+        assertEquals("SHORTLISTED", applicationRepository.findById(application.getId()).orElseThrow().getStatus());
+
+        mockMvc.perform(post("/hr/applications/{id}/status", application.getId())
+                        .session(sessionFor(hr))
+                        .param("status", "INTERVIEW"))
+                .andExpect(status().is3xxRedirection());
+        assertEquals("INTERVIEW", applicationRepository.findById(application.getId()).orElseThrow().getStatus());
+
+        mockMvc.perform(get("/applications").session(sessionFor(seeker)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("applications"))
+                .andExpect(contentContains(job.getTitle()))
+                .andExpect(contentContains("INTERVIEW"));
+    }
+
+    @Test
+    void anonymousUsersCannotAccessProtectedEndpoints() throws Exception {
+        mockMvc.perform(get("/dashboard"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/applications"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/profile"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/hr/dashboard"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/hr/jobs/new"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/hr/jobs/999999/applications"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/admin/dashboard"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/profile/resume"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/hr/applications/999999/resume"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void rolesRemainIsolatedAndAdminCanAccessAdminDashboard() throws Exception {
+        User seeker = createUser("seeker", UserRole.JOB_SEEKER);
+        User hr = createUser("hr", UserRole.HR);
+        User admin = createUser("admin", UserRole.ADMIN);
+
+        mockMvc.perform(get("/hr/dashboard").session(sessionFor(seeker)))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/dashboard"));
+        mockMvc.perform(get("/admin/dashboard").session(sessionFor(seeker)))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/dashboard"));
+        mockMvc.perform(get("/admin/dashboard").session(sessionFor(hr)))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/dashboard"));
+        mockMvc.perform(get("/admin/dashboard").session(sessionFor(admin)))
+                .andExpect(status().isOk()).andExpect(view().name("admin-dashboard"));
+    }
+
+    @Test
+    void hrCannotManageNonOwnedJobOrApplication() throws Exception {
+        User hrA = createUser("hr-a", UserRole.HR);
+        User hrB = createUser("hr-b", UserRole.HR);
+        User seeker = createUser("seeker", UserRole.JOB_SEEKER);
+        Job jobA = createJob(hrA, "Owned by HR A");
+        submitApplication(seeker, jobA);
+        Application application = findApplication(seeker, jobA);
+        createdApplicationIds.add(application.getId());
+
+        mockMvc.perform(get("/hr/jobs/{id}/edit", jobA.getId()).session(sessionFor(hrB)))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/hr/dashboard"));
+        mockMvc.perform(post("/hr/jobs/{id}/edit", jobA.getId()).session(sessionFor(hrB))
+                        .param("title", "Tampered job"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/hr/dashboard"));
+        mockMvc.perform(post("/hr/jobs/{id}/close", jobA.getId()).session(sessionFor(hrB)))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/hr/dashboard"));
+        mockMvc.perform(get("/hr/jobs/{id}/applications", jobA.getId()).session(sessionFor(hrB)))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/hr/dashboard"));
+        mockMvc.perform(get("/hr/applications/{id}", application.getId()).session(sessionFor(hrB)))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/hr/dashboard"));
+        mockMvc.perform(post("/hr/applications/{id}/status", application.getId()).session(sessionFor(hrB))
+                        .param("status", "INTERVIEW"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/hr/dashboard"));
+
+        assertEquals("ACTIVE", jobRepository.findById(jobA.getId()).orElseThrow().getStatus());
+        assertEquals("APPLIED", applicationRepository.findById(application.getId()).orElseThrow().getStatus());
+    }
+
+    @Test
+    void seekerCannotReadAnotherSeekersApplication() throws Exception {
+        User hr = createUser("hr", UserRole.HR);
+        User seekerA = createUser("seeker-a", UserRole.JOB_SEEKER);
+        User seekerB = createUser("seeker-b", UserRole.JOB_SEEKER);
+        Job job = createJob(hr, "Private application job");
+        submitApplication(seekerA, job);
+        Application application = findApplication(seekerA, job);
+        createdApplicationIds.add(application.getId());
+
+        mockMvc.perform(get("/applications").session(sessionFor(seekerB)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("applications", empty()));
+        mockMvc.perform(get("/hr/applications/{id}", application.getId()).session(sessionFor(seekerB)))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/dashboard"));
+    }
+
+    @Test
+    void resumeUploadValidationAndAuthorizedAccess() throws Exception {
+        User seeker = createUser("resume-seeker", UserRole.JOB_SEEKER);
+        MockMultipartFile validPdf = pdfFile("resume.pdf", "%PDF-1.4\nmock resume\n%%EOF");
+
+        mockMvc.perform(multipart("/profile")
+                        .file(validPdf)
+                        .session(sessionFor(seeker))
+                        .param("name", seeker.getName())
+                        .param("phone", "555-0100")
+                        .param("location", "Remote")
+                        .param("headline", "Engineer")
+                        .param("skills", "Java")
+                        .param("education", "Computer Science")
+                        .param("experience", "3 years"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/profile"))
+                .andExpect(flash().attribute("message", "Profile saved successfully."));
+
+        Profile profile = profileRepository.findByUserId(seeker.getId()).orElseThrow();
+        assertNotNull(profile.getResumePath());
+        assertTrue(profile.getResumePath().endsWith(".pdf"));
+        mockMvc.perform(get("/profile/resume").session(sessionFor(seeker)))
+                .andExpect(status().isOk())
+                .andExpect(contentTypePdf());
+
+        User otherSeeker = createUser("other-resume-seeker", UserRole.JOB_SEEKER);
+        mockMvc.perform(get("/profile/resume").session(sessionFor(otherSeeker)))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/profile/resume"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
+
+        MockMultipartFile invalidPdf = new MockMultipartFile("resumeFile", "resume.pdf", "application/pdf",
+                "not a pdf".getBytes(StandardCharsets.UTF_8));
+        User invalidSeeker = createUser("invalid-resume-seeker", UserRole.JOB_SEEKER);
+        mockMvc.perform(multipart("/profile").file(invalidPdf).session(sessionFor(invalidSeeker))
+                        .param("name", invalidSeeker.getName()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/profile"))
+                .andExpect(flash().attribute("error", "Resume must be a valid PDF file."));
+        assertTrue(profileRepository.findByUserId(invalidSeeker.getId()).isEmpty());
+
+        byte[] oversizedContent = new byte[5 * 1024 * 1024 + 1];
+        MockMultipartFile oversizedPdf = new MockMultipartFile("resumeFile", "large.pdf", "application/pdf",
+                oversizedContent);
+        User oversizedSeeker = createUser("oversized-resume-seeker", UserRole.JOB_SEEKER);
+        mockMvc.perform(multipart("/profile").file(oversizedPdf).session(sessionFor(oversizedSeeker))
+                        .param("name", oversizedSeeker.getName()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/profile"))
+                .andExpect(flash().attribute("error", "Resume must be 5 MB or smaller."));
+        assertTrue(profileRepository.findByUserId(oversizedSeeker.getId()).isEmpty());
+    }
+
+    @Test
+    void hrCanAccessApplicantResumeOnlyForOwnedJob() throws Exception {
+        User hrA = createUser("resume-hr-a", UserRole.HR);
+        User hrB = createUser("resume-hr-b", UserRole.HR);
+        User seeker = createUser("applicant-with-resume", UserRole.JOB_SEEKER);
+        uploadResume(seeker);
+        Job jobA = createJob(hrA, "Resume ownership job");
+        submitApplication(seeker, jobA);
+        Application application = findApplication(seeker, jobA);
+        createdApplicationIds.add(application.getId());
+
+        mockMvc.perform(get("/hr/applications/{id}/resume", application.getId()).session(sessionFor(hrA)))
+                .andExpect(status().isOk())
+                .andExpect(contentTypePdf());
+        mockMvc.perform(get("/hr/applications/{id}/resume", application.getId()).session(sessionFor(hrB)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/hr/applications/{id}/resume", application.getId()))
+                .andExpect(status().isForbidden());
+        User admin = createUser("resume-admin", UserRole.ADMIN);
+        mockMvc.perform(get("/hr/applications/{id}/resume", application.getId()).session(sessionFor(admin)))
+                .andExpect(status().isForbidden());
+    }
+
+    private User createUser(String label, UserRole role) {
+        User user = new User();
+        user.setName(testRunId + " " + label);
+        user.setEmail(testRunId + "." + label + "@example.com");
+        user.setPassword("password");
+        user.setRole(role);
+        User savedUser = userRepository.save(user);
+        createdUserIds.add(savedUser.getId());
+        return savedUser;
+    }
+
+    private Job createJob(User owner, String title) {
+        Job job = new Job();
+        job.setTitle(testRunId + " " + title);
+        job.setCompany("Test Company");
+        job.setLocation("Remote");
+        job.setDescription("Test description");
+        job.setSalary("USD 100000");
+        job.setSkills("Java, Spring Boot");
+        job.setJobType("Full-time");
+        job.setExperience("2-4 years");
+        job.setApplicationDeadline(LocalDate.of(2030, 12, 31));
+        job.setOwnerId(owner.getId());
+        job.setPostedDate(LocalDate.now());
+        job.setStatus("ACTIVE");
+        Job savedJob = jobRepository.save(job);
+        createdJobIds.add(savedJob.getId());
+        return savedJob;
+    }
+
+    private Job createJobWithDetails(User owner, String title, String company, String location, String experience,
+            String jobType, String salary, String skills, LocalDate postedDate) {
+        Job job = createJob(owner, title);
+        job.setCompany(company);
+        job.setLocation(location);
+        job.setExperience(experience);
+        job.setJobType(jobType);
+        job.setSalary(salary);
+        job.setSkills(skills);
+        job.setPostedDate(postedDate);
+        return jobRepository.save(job);
+    }
+
+    private Job createBangaloreLocationSearchJob(String hrLabel, String title) {
+        User hr = createUser(hrLabel, UserRole.HR);
+        return createJobWithDetails(hr, title, "Location Filter Co", "Bangalore", "2 years", "Full-time",
+                "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+    }
+
+    private Job createExperienceSearchJob(String hrLabel, String title) {
+        User hr = createUser(hrLabel, UserRole.HR);
+        return createJobWithDetails(hr, title, "Experience Filter Co", "Remote", "2-4 years", "Full-time",
+                "USD 100000", "Java", LocalDate.of(2026, 1, 1));
+    }
+
+    private void saveJob(User seeker, Job job) throws Exception {
+        mockMvc.perform(post("/jobs/{id}/save", job.getId()).session(sessionFor(seeker)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/jobs/" + job.getId()));
+    }
+
+    private void submitApplication(User seeker, Job job) throws Exception {
+        mockMvc.perform(post("/applications/submit")
+                        .session(sessionFor(seeker))
+                        .param("jobId", job.getId().toString())
+                        .param("phone", "555-0100")
+                        .param("resume", "resume text")
+                        .param("coverLetter", "A realistic cover letter."))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/applications/success"));
+    }
+
+    private void uploadResume(User seeker) throws Exception {
+        mockMvc.perform(multipart("/profile")
+                        .file(pdfFile("resume.pdf", "%PDF-1.4\nresume\n%%EOF"))
+                        .session(sessionFor(seeker))
+                        .param("name", seeker.getName()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/profile"));
+    }
+
+    private MockMultipartFile pdfFile(String filename, String content) {
+        return new MockMultipartFile("resumeFile", filename, "application/pdf",
+                content.getBytes(StandardCharsets.US_ASCII));
+    }
+
+    private MockHttpSession sessionFor(User user) {
+        MockHttpSession session = new MockHttpSession();
+                session.setAttribute("loggedInUser", user);
+        return session;
+    }
+
+    private Job findJobOwnedBy(User owner, String title) {
+        return jobRepository.findAll().stream()
+                .filter(job -> owner.getId().equals(job.getOwnerId()) && title.equals(job.getTitle()))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private Application findApplication(User seeker, Job job) {
+        return applicationRepository.findByUserIdOrderByAppliedDateDesc(seeker.getId()).stream()
+                .filter(application -> job.getId().equals(application.getJobId()))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private static ResultMatcher contentContains(String expected) {
+        return result -> assertTrue(result.getResponse().getContentAsString().contains(expected),
+                "Expected response to contain: " + expected);
+    }
+
+    private static ResultMatcher contentDoesNotContain(String unexpected) {
+        return result -> assertTrue(!result.getResponse().getContentAsString().contains(unexpected),
+                "Expected response not to contain: " + unexpected);
+    }
+
+    private static ResultMatcher contentAppearsBefore(String first, String second) {
+        return result -> {
+            String content = result.getResponse().getContentAsString();
+            int firstIndex = content.indexOf(first);
+            int secondIndex = content.indexOf(second);
+            assertTrue(firstIndex >= 0 && secondIndex >= 0 && firstIndex < secondIndex,
+                    "Expected '" + first + "' to appear before '" + second + "'.");
+        };
+    }
+
+    private static ResultMatcher contentTypePdf() {
+        return result -> assertTrue(result.getResponse().getContentType().startsWith("application/pdf"),
+                "Expected PDF content type but was: " + result.getResponse().getContentType());
+    }
+}

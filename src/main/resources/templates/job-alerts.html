@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Job Alerts - JobPortal</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        crossorigin="anonymous">
+
+    <!-- Font Awesome -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.3/css/all.min.css"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer">
+
+    <!-- JobPortal Custom CSS -->
+    <link
+        rel="stylesheet"
+        th:href="@{/css/styles.css}">
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
+
+
+    <!-- Main Content -->
+    <section class="py-5">
+
+        <div class="container">
+
+            <!-- Page Heading -->
+            <div class="mb-4">
+
+                <h2 class="fw-bold mb-1">
+                    Job Alerts
+                </h2>
+
+                <p class="text-muted mb-0">
+                    Create alerts to keep track of jobs that match your interests.
+                </p>
+
+            </div>
+
+
+            <!-- Success Message -->
+            <div
+                th:if="${message}"
+                class="alert alert-success"
+                role="alert">
+
+                <i class="fas fa-check-circle me-2"></i>
+
+                <span th:text="${message}">
+                    Job alert created successfully.
+                </span>
+
+            </div>
+
+
+            <!-- Error Message -->
+            <div
+                th:if="${error}"
+                class="alert alert-danger"
+                role="alert">
+
+                <i class="fas fa-exclamation-circle me-2"></i>
+
+                <span th:text="${error}">
+                    Something went wrong.
+                </span>
+
+            </div>
+
+
+            <!-- Create Job Alert Card -->
+            <div class="card shadow-sm border-0 mb-4">
+
+                <div class="card-body p-5">
+
+                    <div class="d-flex align-items-center mb-4">
+
+                        <div class="me-3">
+
+                            <div
+                                class="avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                                style="width: 50px; height: 50px;">
+
+                                <i class="fas fa-bell fa-lg"></i>
+
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                            <h5 class="fw-bold mb-0">
+                                Create a Job Alert
+                            </h5>
+
+                            <p class="text-muted mb-0">
+                                Get notified when jobs match your preferences.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Create Alert Form -->
+                    <form
+                        th:action="@{/job-alerts}"
+                        th:object="${newAlert}"
+                        method="post">
+
+                        <div class="row g-3">
+
+                            <!-- Keyword -->
+                            <div class="col-md-6">
+
+                                <label
+                                    for="keyword"
+                                    class="form-label fw-semibold">
+
+                                    Keyword
+
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="keyword"
+                                    th:field="*{keyword}"
+                                    class="form-control"
+                                    placeholder="Example: Java, React, Spring Boot">
+
+                            </div>
+
+
+                            <!-- Location -->
+                            <div class="col-md-6">
+
+                                <label
+                                    for="location"
+                                    class="form-label fw-semibold">
+
+                                    Location
+
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="location"
+                                    th:field="*{location}"
+                                    class="form-control"
+                                    placeholder="Example: Bangalore, Delhi">
+
+                            </div>
+
+
+                            <!-- Job Type -->
+                            <div class="col-md-6">
+
+                                <label
+                                    for="jobType"
+                                    class="form-label fw-semibold">
+
+                                    Job Type
+
+                                </label>
+
+                                <select
+                                    id="jobType"
+                                    th:field="*{jobType}"
+                                    class="form-select">
+
+                                    <option value="">
+                                        Any Job Type
+                                    </option>
+
+                                    <option value="Full Time">
+                                        Full Time
+                                    </option>
+
+                                    <option value="Part Time">
+                                        Part Time
+                                    </option>
+
+                                    <option value="Internship">
+                                        Internship
+                                    </option>
+
+                                    <option value="Contract">
+                                        Contract
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- Experience -->
+                            <div class="col-md-6">
+
+                                <label
+                                    for="experience"
+                                    class="form-label fw-semibold">
+
+                                    Experience
+
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="experience"
+                                    th:field="*{experience}"
+                                    class="form-control"
+                                    placeholder="Example: 0-2 years">
+
+                            </div>
+
+
+                            <!-- Minimum Salary -->
+                            <div class="col-md-6">
+
+                                <label
+                                    for="minSalary"
+                                    class="form-label fw-semibold">
+
+                                    Minimum Salary
+
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="minSalary"
+                                    th:field="*{minSalary}"
+                                    class="form-control"
+                                    placeholder="Example: 6 LPA">
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Submit Button -->
+                        <div class="mt-4">
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary">
+
+                                <i class="fas fa-bell me-2"></i>
+
+                                Create Alert
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+
+            <!-- Existing Alerts -->
+            <div class="card shadow-sm border-0">
+
+                <div class="card-body p-5">
+
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+
+                        <div>
+
+                            <h5 class="fw-bold mb-1">
+                                Your Job Alerts
+                            </h5>
+
+                            <p class="text-muted mb-0">
+                                Manage your saved job alert preferences.
+                            </p>
+
+                        </div>
+
+                        <span class="badge bg-primary">
+                            <span th:text="${#lists.size(alerts)}">0</span>
+                            Alerts
+                        </span>
+
+                    </div>
+
+
+                    <!-- No Alerts -->
+                    <div th:if="${#lists.isEmpty(alerts)}">
+
+                        <div class="text-center py-5">
+
+                            <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+
+                            <h6 class="fw-bold">
+                                No Job Alerts Yet
+                            </h6>
+
+                            <p class="text-muted mb-0">
+                                You haven't created any job alerts yet.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Alerts Exist -->
+                    <div th:unless="${#lists.isEmpty(alerts)}">
+
+                        <div
+                            th:each="alert : ${alerts}"
+                            class="card border-0 shadow-sm mb-3">
+
+                            <div class="card-body">
+
+                                <!-- Alert Header -->
+                                <div
+                                    class="d-flex justify-content-between align-items-start mb-3">
+
+                                    <div>
+
+                                        <h5 class="fw-bold mb-1">
+
+                                            <i class="fas fa-bell text-primary me-2"></i>
+
+                                            <span
+                                                th:text="${alert.keyword != null and !alert.keyword.isBlank()
+                                                    ? alert.keyword + ' Jobs'
+                                                    : 'Job Alert'}">
+
+                                                Job Alert
+
+                                            </span>
+
+                                        </h5>
+
+                                    </div>
+
+
+                                    <!-- Status -->
+                                    <span
+                                        class="badge"
+                                        th:classappend="${alert.enabled
+                                            ? ' bg-success'
+                                            : ' bg-secondary'}"
+                                        th:text="${alert.enabled
+                                            ? 'Enabled'
+                                            : 'Disabled'}">
+
+                                        Enabled
+
+                                    </span>
+
+                                </div>
+
+
+                                <!-- Alert Details -->
+                                <div class="row g-2">
+
+                                    <!-- Location -->
+                                    <div
+                                        class="col-md-6"
+                                        th:if="${alert.location != null and !alert.location.isBlank()}">
+
+                                        <p class="text-muted mb-2">
+
+                                            <i class="fas fa-location-dot me-2"></i>
+
+                                            <strong>Location:</strong>
+
+                                            <span th:text="${alert.location}">
+                                                Bangalore
+                                            </span>
+
+                                        </p>
+
+                                    </div>
+
+
+                                    <!-- Job Type -->
+                                    <div
+                                        class="col-md-6"
+                                        th:if="${alert.jobType != null and !alert.jobType.isBlank()}">
+
+                                        <p class="text-muted mb-2">
+
+                                            <i class="fas fa-briefcase me-2"></i>
+
+                                            <strong>Job Type:</strong>
+
+                                            <span th:text="${alert.jobType}">
+                                                Full Time
+                                            </span>
+
+                                        </p>
+
+                                    </div>
+
+
+                                    <!-- Experience -->
+                                    <div
+                                        class="col-md-6"
+                                        th:if="${alert.experience != null and !alert.experience.isBlank()}">
+
+                                        <p class="text-muted mb-2">
+
+                                            <i class="fas fa-user-clock me-2"></i>
+
+                                            <strong>Experience:</strong>
+
+                                            <span th:text="${alert.experience}">
+                                                0-2 years
+                                            </span>
+
+                                        </p>
+
+                                    </div>
+
+
+                                    <!-- Minimum Salary -->
+                                    <div
+                                        class="col-md-6"
+                                        th:if="${alert.minSalary != null and !alert.minSalary.isBlank()}">
+
+                                        <p class="text-muted mb-2">
+
+                                            <i class="fas fa-indian-rupee-sign me-2"></i>
+
+                                            <strong>Minimum Salary:</strong>
+
+                                            <span th:text="${alert.minSalary}">
+                                                6 LPA
+                                            </span>
+
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- Created Date -->
+                                <p
+                                    th:if="${alert.createdAt != null}"
+                                    class="text-muted small mb-3">
+
+                                    <i class="fas fa-calendar me-2"></i>
+
+                                    <strong>Created:</strong>
+
+                                    <span
+                                        th:text="${#temporals.format(
+                                            alert.createdAt,
+                                            'dd-MM-yyyy HH:mm'
+                                        )}">
+
+                                        12-09-2026 10:30
+
+                                    </span>
+
+                                </p>
+
+
+                                <hr>
+
+
+                                <!-- Actions -->
+                                <div class="d-flex gap-2">
+
+                                    <!-- Enable / Disable -->
+                                    <form
+                                        th:action="@{'/job-alerts/' + ${alert.id} + '/toggle'}"
+                                        method="post">
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-outline-primary btn-sm">
+
+                                            <i
+                                                class="fas"
+                                                th:classappend="${alert.enabled
+                                                    ? ' fa-toggle-off'
+                                                    : ' fa-toggle-on'}">
+                                            </i>
+
+                                            <span
+                                                th:text="${alert.enabled
+                                                    ? 'Disable'
+                                                    : 'Enable'}">
+
+                                                Disable
+
+                                            </span>
+
+                                        </button>
+
+                                    </form>
+
+
+                                    <!-- Delete -->
+                                    <form
+                                        th:action="@{'/job-alerts/' + ${alert.id} + '/delete'}"
+                                        method="post">
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-outline-danger btn-sm">
+
+                                            <i class="fas fa-trash me-1"></i>
+
+                                            Delete
+
+                                        </button>
+
+                                    </form>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- Footer -->
+    <footer class="bg-primary text-white py-4">
+
+        <div class="container text-center">
+
+            <p class="mb-0">
+                &copy; 2026 JobPortal. All rights reserved.
+            </p>
+
+        </div>
+
+    </footer>
+
+
+    <!-- Bootstrap JavaScript -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous">
+    </script>
+
+    <!-- JobPortal JavaScript -->
+    <script th:src="@{/js/scripts.js}"></script>
+
+</body>
+
+</html>

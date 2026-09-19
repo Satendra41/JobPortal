@@ -1,0 +1,78 @@
+/* Global theme colors */
+:root {
+    --brand-primary: #1a73e8;
+    --brand-secondary: #0f172a;
+    --brand-light: #f8fafc;
+    --brand-accent: #f59e0b;
+    --brand-muted: #64748b;
+}
+
+body {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background-color: var(--brand-light);
+    color: var(--brand-secondary);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.hero-section {
+    min-height: 70vh;
+    background: linear-gradient(135deg, #1a73e8 0%, #3b82f6 100%);
+    color: white;
+}
+
+.hero-section .hero-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.py-5 {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+}
+
+.card.job-card:hover {
+    transform: translateY(-4px);
+    transition: transform 0.2s ease;
+}
+
+.footer-links a {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.footer-links a:hover {
+    color: #ffffff;
+}
+
+.job-badge {
+    background-color: rgba(26, 115, 232, 0.1);
+    color: #1a73e8;
+}
+
+.profile-card {
+    border-left: 4px solid #1a73e8;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(26, 115, 232, 0.25);
+}
+
+.btn-primary {
+    background-color: var(--brand-primary);
+    border-color: var(--brand-primary);
+}
+
+.btn-primary:hover {
+    background-color: #1558b0;
+    border-color: #1558b0;
+}
+
+@media (max-width: 768px) {
+    .hero-section {
+        min-height: 55vh;
+    }
+}

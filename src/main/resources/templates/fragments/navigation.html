@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+
+<nav th:fragment="mainNavigation"
+     class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+
+    <div class="container">
+
+        <!-- Brand -->
+        <a class="navbar-brand" href="/">
+            JobPortal
+        </a>
+
+
+        <!-- Mobile Menu Button -->
+        <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNav"
+            aria-controls="navbarNav"
+            aria-expanded="false"
+            aria-label="Toggle navigation">
+
+            <span class="navbar-toggler-icon"></span>
+
+        </button>
+
+
+        <!-- Navigation Links -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+
+            <ul class="navbar-nav ms-auto">
+
+
+                <!-- ==================== -->
+                <!-- ANONYMOUS USER -->
+                <!-- ==================== -->
+
+                <th:block
+                    th:if="${session.loggedInUser == null}">
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            Home
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/jobs">
+                            Jobs
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">
+                            About
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/contact">
+                            Contact
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">
+                            Login
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/register">
+                            Register
+                        </a>
+                    </li>
+
+                </th:block>
+
+
+                <!-- ==================== -->
+                <!-- JOB SEEKER -->
+                <!-- ==================== -->
+
+                <th:block
+                    th:if="${session.loggedInUser != null and session.loggedInUser.role.name() == 'JOB_SEEKER'}">
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            Home
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/jobs">
+                            Jobs
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">
+                            Dashboard
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/profile">
+                            Profile
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/applications">
+                            My Applications
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/saved-jobs">
+                            Saved Jobs
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/job-alerts">
+                            Job Alerts
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">
+                            Logout
+                        </a>
+                    </li>
+
+                </th:block>
+
+
+                <!-- ==================== -->
+                <!-- HR USER -->
+                <!-- ==================== -->
+
+                <th:block
+                    th:if="${session.loggedInUser != null and session.loggedInUser.role.name() == 'HR'}">
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            Home
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/jobs">
+                            Jobs
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/hr/dashboard">
+                            HR Dashboard
+                        </a>
+                    </li>
+
+                    <!-- Company Profile -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="/hr/company-profile">
+                            Company Profile
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/hr/jobs">
+                            My Jobs
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/hr/jobs">
+                            Applicants
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">
+                            Logout
+                        </a>
+                    </li>
+
+                </th:block>
+
+
+                <!-- ==================== -->
+                <!-- ADMIN -->
+                <!-- ==================== -->
+
+                <th:block
+                    th:if="${session.loggedInUser != null and session.loggedInUser.role.name() == 'ADMIN'}">
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/dashboard">
+                            Admin Dashboard
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/users">
+                            Users
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/jobs">
+                            Jobs
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/applications">
+                            Applications
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">
+                            Logout
+                        </a>
+                    </li>
+
+                </th:block>
+
+
+            </ul>
+
+        </div>
+
+    </div>
+
+</nav>
+
+</body>
+
+</html>

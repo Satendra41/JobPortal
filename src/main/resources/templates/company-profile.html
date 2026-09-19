@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Company Profile - JobPortal</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          crossorigin="anonymous">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.3/css/all.min.css"
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer">
+
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+
+<body>
+
+<!-- Navigation -->
+<nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
+
+
+<main class="py-5">
+
+    <div class="container">
+
+        <!-- Page Header -->
+        <div class="mb-4">
+
+            <h1 class="fw-bold">
+                Company Profile
+            </h1>
+
+            <p class="text-muted mb-0">
+                Create and manage your company information for job seekers.
+            </p>
+
+        </div>
+
+
+        <!-- Success Message -->
+        <div th:if="${message}"
+             class="alert alert-success"
+             th:text="${message}">
+        </div>
+
+
+        <!-- Error Message -->
+        <div th:if="${error}"
+             class="alert alert-danger"
+             th:text="${error}">
+        </div>
+
+
+        <div class="row g-4">
+
+            <!-- Company Form -->
+            <div class="col-lg-8">
+
+                <div class="card shadow-sm border-0">
+
+                    <div class="card-body p-4">
+
+                        <div class="d-flex align-items-center mb-4">
+
+                            <div class="avatar rounded-circle bg-primary text-white
+                                        d-flex align-items-center justify-content-center me-3"
+                                 style="width: 56px; height: 56px;">
+
+                                <i class="fas fa-building fa-lg"></i>
+
+                            </div>
+
+                            <div>
+
+                                <h4 class="fw-bold mb-1">
+                                    Company Information
+                                </h4>
+
+                                <p class="text-muted mb-0">
+                                    Keep your company details up to date.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                        <form th:action="@{/hr/company-profile}"
+                              th:object="${companyProfile}"
+                              method="post">
+
+
+                            <!-- Company Name -->
+                            <div class="mb-3">
+
+                                <label for="companyName"
+                                       class="form-label fw-semibold">
+
+                                    Company Name
+                                    <span class="text-danger">*</span>
+
+                                </label>
+
+                                <input type="text"
+                                       id="companyName"
+                                       th:field="*{companyName}"
+                                       class="form-control"
+                                       placeholder="Example: ABC Technologies"
+                                       required>
+
+                            </div>
+
+
+                            <!-- Industry -->
+                            <div class="mb-3">
+
+                                <label for="industry"
+                                       class="form-label fw-semibold">
+
+                                    Industry
+
+                                </label>
+
+                                <input type="text"
+                                       id="industry"
+                                       th:field="*{industry}"
+                                       class="form-control"
+                                       placeholder="Example: Information Technology">
+
+                            </div>
+
+
+                            <!-- Location -->
+                            <div class="mb-3">
+
+                                <label for="location"
+                                       class="form-label fw-semibold">
+
+                                    Location
+
+                                </label>
+
+                                <input type="text"
+                                       id="location"
+                                       th:field="*{location}"
+                                       class="form-control"
+                                       placeholder="Example: Bangalore, India">
+
+                            </div>
+
+
+                            <!-- Company Size -->
+                            <div class="mb-3">
+
+                                <label for="companySize"
+                                       class="form-label fw-semibold">
+
+                                    Company Size
+
+                                </label>
+
+                                <select id="companySize"
+                                        th:field="*{companySize}"
+                                        class="form-select">
+
+                                    <option value="">
+                                        Select company size
+                                    </option>
+
+                                    <option value="1-10 employees">
+                                        1-10 employees
+                                    </option>
+
+                                    <option value="11-50 employees">
+                                        11-50 employees
+                                    </option>
+
+                                    <option value="51-200 employees">
+                                        51-200 employees
+                                    </option>
+
+                                    <option value="201-500 employees">
+                                        201-500 employees
+                                    </option>
+
+                                    <option value="501-1000 employees">
+                                        501-1000 employees
+                                    </option>
+
+                                    <option value="1000+ employees">
+                                        1000+ employees
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- Founded Year -->
+                            <div class="mb-3">
+
+                                <label for="foundedYear"
+                                       class="form-label fw-semibold">
+
+                                    Founded Year
+
+                                </label>
+
+                                <input type="number"
+                                       id="foundedYear"
+                                       th:field="*{foundedYear}"
+                                       class="form-control"
+                                       placeholder="Example: 2015"
+                                       min="1800"
+                                       max="2100">
+
+                            </div>
+
+
+                            <!-- Contact Email -->
+                            <div class="mb-3">
+
+                                <label for="contactEmail"
+                                       class="form-label fw-semibold">
+
+                                    Contact Email
+
+                                </label>
+
+                                <input type="email"
+                                       id="contactEmail"
+                                       th:field="*{contactEmail}"
+                                       class="form-control"
+                                       placeholder="Example: hr@company.com">
+
+                            </div>
+
+
+                            <!-- Website -->
+                            <div class="mb-3">
+
+                                <label for="website"
+                                       class="form-label fw-semibold">
+
+                                    Website
+
+                                </label>
+
+                                <input type="url"
+                                       id="website"
+                                       th:field="*{website}"
+                                       class="form-control"
+                                       placeholder="https://www.example.com">
+
+                            </div>
+
+
+                            <!-- Address -->
+                            <div class="mb-3">
+
+                                <label for="address"
+                                       class="form-label fw-semibold">
+
+                                    Address
+
+                                </label>
+
+                                <textarea id="address"
+                                          th:field="*{address}"
+                                          class="form-control"
+                                          rows="3"
+                                          placeholder="Enter complete company address">
+                                </textarea>
+
+                            </div>
+
+
+                            <!-- Description -->
+                            <div class="mb-4">
+
+                                <label for="description"
+                                       class="form-label fw-semibold">
+
+                                    Company Description
+
+                                </label>
+
+                                <textarea id="description"
+                                          th:field="*{description}"
+                                          class="form-control"
+                                          rows="5"
+                                          placeholder="Describe your company, products, services and work culture">
+                                </textarea>
+
+                            </div>
+
+
+                            <!-- Buttons -->
+                            <div class="d-flex gap-2">
+
+                                <button type="submit"
+                                        class="btn btn-primary">
+
+                                    <i class="fas fa-save me-2"></i>
+                                    Save Company Profile
+
+                                </button>
+
+                                <a href="/hr/dashboard"
+                                   class="btn btn-outline-secondary">
+
+                                    Cancel
+
+                                </a>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Information Card -->
+            <div class="col-lg-4">
+
+                <div class="card profile-card shadow-sm border-0">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Why create a company profile?
+                        </h5>
+
+                        <p class="text-muted">
+                            A complete company profile helps job seekers understand
+                            your organization before applying for a job.
+                        </p>
+
+                        <hr>
+
+                        <ul class="text-muted ps-3">
+
+                            <li class="mb-2">
+                                Show your company information
+                            </li>
+
+                            <li class="mb-2">
+                                Build trust with candidates
+                            </li>
+
+                            <li class="mb-2">
+                                Provide company location and industry
+                            </li>
+
+                            <li class="mb-2">
+                                Add your company website
+                            </li>
+
+                            <li>
+                                Help candidates learn about your organization
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Delete Card -->
+                <div class="card shadow-sm border-0 mt-4">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold">
+                            Manage Profile
+                        </h5>
+
+                        <p class="text-muted">
+                            You can remove your company profile if it is no longer
+                            required.
+                        </p>
+
+                        <form th:action="@{/hr/company-profile/delete}"
+                              method="post"
+                              onsubmit="return confirm('Are you sure you want to delete your company profile?');">
+
+                            <button type="submit"
+                                    class="btn btn-outline-danger">
+
+                                <i class="fas fa-trash me-2"></i>
+                                Delete Company Profile
+
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</main>
+
+
+<!-- Footer -->
+<footer class="bg-primary text-white py-4">
+
+    <div class="container text-center">
+
+        <p class="mb-0">
+            &copy; 2026 JobPortal. All rights reserved.
+        </p>
+
+    </div>
+
+</footer>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous">
+</script>
+
+<script th:src="@{/js/scripts.js}"></script>
+
+</body>
+</html>

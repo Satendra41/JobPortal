@@ -1,0 +1,48 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+# Local temporary files
+*.log
+compile_out.txt
+cp.txt
+jobs8082.txt
+login.txt
+out8080.txt
+out8081.txt
+reg.txt
+temp_mvnw_out.txt
+tmp_mvnw_output.txt
+mvnw.cmd.backup
+CON
+.verification/
+apache-maven-3.9.12/
