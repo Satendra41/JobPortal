@@ -35,7 +35,14 @@ public class AdminController {
         this.jobService = jobService;
         this.applicationService = applicationService;
     }
-
+    @GetMapping("/admin")
+public String adminHome(HttpSession session) {
+    if (!isAdmin(session)) {
+        return unauthorizedRedirect(session);
+    }
+    return "redirect:/admin/dashboard";
+}
+   
     @GetMapping("/admin/dashboard")
     public String dashboard(HttpSession session, Model model) {
         if (!isAdmin(session)) {
