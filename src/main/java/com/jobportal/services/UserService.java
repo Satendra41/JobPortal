@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.jobportal.model.User;
 import com.jobportal.model.UserRole;
@@ -13,6 +14,8 @@ import com.jobportal.repository.UserRepository;
 @Service
 public class UserService {
 
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
+
     private final UserRepository userRepository;
 
     public UserService(UserRepository userRepository) {
@@ -20,10 +23,31 @@ public class UserService {
     }
 
     public @NonNull User registerUser(@NonNull User user) {
+        if (user.getName() == null || user.getName().isBlank()
+                || user.getEmail() == null || user.getEmail().isBlank()
+                || user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Name, email, and password are required.");
+        }
+        if (isEmailTaken(user.getEmail())) {
+            throw new IllegalArgumentException("Email is already registered.");
+        }
+        user.setId(null);
+        user.setPassword(PASSWORD_ENCODER.encode(user.getPassword()));
+        user.setRole(UserRole.JOB_SEEKER);
         return userRepository.save(user);
     }
 
     public @NonNull User save(@NonNull User user) {
+        if (user.getId() != null) {
+            User stored = userRepository.findById(user.getId()).orElse(null);
+            if (stored != null) {
+                if (user.getPassword() == null || user.getPassword().isBlank()) {
+                    user.setPassword(stored.getPassword());
+                } else if (!isPasswordHash(user.getPassword())) {
+                    user.setPassword(PASSWORD_ENCODER.encode(user.getPassword()));
+                }
+            }
+        }
         return userRepository.save(user);
     }
 
@@ -41,6 +65,7 @@ public class UserService {
         if (isEmailTaken(email)) {
             return "Email is already registered";
         }
+        user.setPassword(PASSWORD_ENCODER.encode(user.getPassword()));
         user.setRole(UserRole.JOB_SEEKER);
         userRepository.save(user);
         return "success";
@@ -51,16 +76,13 @@ public class UserService {
     }
 
     public String loginUser(String email, String password) {
+        if (authenticateUser(email, password) != null) {
+            return "Login Successful";
+        }
         List<User> existingUsers = userRepository.findAllByEmail(email);
 
         if (existingUsers.isEmpty()) {
             return "User Not Found";
-        }
-
-        for (User existingUser : existingUsers) {
-            if (existingUser.getPassword().equals(password)) {
-                return "Login Successful";
-            }
         }
 
         return "Wrong Password";
@@ -71,10 +93,21 @@ public class UserService {
             return null;
         }
 
-        return userRepository.findAllByEmail(email).stream()
-            .filter(user -> password.equals(user.getPassword()))
-            .findFirst()
-            .orElse(null);
+        for (User user : userRepository.findAllByEmail(email)) {
+            String storedPassword = user.getPassword();
+            if (storedPassword == null) continue;
+            boolean matched = isPasswordHash(storedPassword)
+                    ? PASSWORD_ENCODER.matches(password, storedPassword)
+                    : password.equals(storedPassword);
+            if (matched) {
+                if (!isPasswordHash(storedPassword)) {
+                    user.setPassword(PASSWORD_ENCODER.encode(password));
+                    userRepository.save(user);
+                }
+                return user;
+            }
+        }
+        return null;
     }
 
     public List<User> getAllUsers() {
@@ -95,7 +128,10 @@ public class UserService {
         User user = userOptional.get();
         user.setName(updatedUser.getName());
         user.setEmail(updatedUser.getEmail());
-        user.setPassword(updatedUser.getPassword());
+        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isBlank()) {
+            user.setPassword(isPasswordHash(updatedUser.getPassword()) ? updatedUser.getPassword()
+                    : PASSWORD_ENCODER.encode(updatedUser.getPassword()));
+        }
 
         return userRepository.save(user);
     }
@@ -121,5 +157,9 @@ public class UserService {
         }
         userRepository.deleteById(id);
         return true;
+    }
+
+    private boolean isPasswordHash(String password) {
+        return password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$");
     }
 }

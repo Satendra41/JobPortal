@@ -2,6 +2,7 @@ package com.jobportal.controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+
+import com.jobportal.dto.UserResponse;
 import com.jobportal.model.User;
 import com.jobportal.model.UserRole;
 import com.jobportal.services.UserService;
@@ -32,14 +37,19 @@ public class UserController {
     }
 
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public User registerUser(@RequestBody @NonNull User user) {
-        user.setRole(UserRole.JOB_SEEKER);
-        return userService.registerUser(user);
+    public UserResponse registerUser(@RequestBody @NonNull User user) {
+        return UserResponse.from(userService.registerUser(user));
     }
 
     @PostMapping("/login")
-    public String loginUser(@RequestBody @NonNull User user) {
-        return userService.loginUser(user.getEmail(), user.getPassword());
+    public String loginUser(@RequestBody @NonNull User user, HttpServletRequest request) {
+        User authenticatedUser = userService.authenticateUser(user.getEmail(), user.getPassword());
+        if (authenticatedUser == null) return "Invalid email or password";
+        HttpSession session = request.getSession(true);
+        request.changeSessionId();
+        authenticatedUser.setPassword(null);
+        session.setAttribute("loggedInUser", authenticatedUser);
+        return "Login Successful";
     }
 
     @GetMapping("/login")
@@ -48,35 +58,59 @@ public class UserController {
     }
 
     @GetMapping
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
+    public ResponseEntity<List<UserResponse>> getAllUsers(HttpSession session) {
+        if (!isAdmin(session)) return ResponseEntity.status(403).build();
+        List<UserResponse> users = userService.getAllUsers().stream()
+                .map(UserResponse::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(users);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable @NonNull Long id) {
+    public ResponseEntity<UserResponse> getUserById(@PathVariable @NonNull Long id, HttpSession session) {
+        User current = getCurrentUser(session);
+        if (current == null || (!isAdmin(session) && !id.equals(current.getId()))) {
+            return ResponseEntity.status(403).build();
+        }
         User user = userService.getUserById(id);
         if (user == null) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(UserResponse.from(user));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable @NonNull Long id, @RequestBody @NonNull User user) {
+    public ResponseEntity<UserResponse> updateUser(@PathVariable @NonNull Long id, @RequestBody @NonNull User user,
+            HttpSession session) {
+        User current = getCurrentUser(session);
+        if (current == null || (!isAdmin(session) && !id.equals(current.getId()))) {
+            return ResponseEntity.status(403).build();
+        }
         User updatedUser = userService.updateUser(id, user);
         if (updatedUser == null) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(updatedUser);
+        return ResponseEntity.ok(UserResponse.from(updatedUser));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteUser(@PathVariable @NonNull Long id) {
+    public ResponseEntity<String> deleteUser(@PathVariable @NonNull Long id, HttpSession session) {
+        if (!isAdmin(session)) return ResponseEntity.status(403).build();
         boolean deleted = userService.deleteUser(id);
         if (!deleted) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok("User Deleted Successfully");
+    }
+
+    private User getCurrentUser(HttpSession session) {
+        Object user = session.getAttribute("loggedInUser");
+        return user instanceof User current ? current : null;
+    }
+
+    private boolean isAdmin(HttpSession session) {
+        User user = getCurrentUser(session);
+        return user != null && user.getRole() == UserRole.ADMIN;
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
@@ -85,5 +119,10 @@ public class UserController {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid user id. Use numeric id like /users/1"));
         }
         return ResponseEntity.badRequest().body(Map.of("error", "Invalid request parameter"));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidUserInput(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
     }
 }

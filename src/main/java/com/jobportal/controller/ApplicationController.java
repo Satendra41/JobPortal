@@ -17,6 +17,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.jobportal.model.Application;
 import com.jobportal.model.Job;
 import com.jobportal.model.User;
+import com.jobportal.model.UserRole;
 import com.jobportal.services.ApplicationService;
 import com.jobportal.services.JobService;
 import com.jobportal.services.ProfileService;
@@ -44,7 +45,7 @@ public class ApplicationController {
     @GetMapping("/jobs/{id}/apply")
     public String applyForJob(@PathVariable Long id, Model model, HttpSession session, RedirectAttributes redirectAttributes) {
         Object loggedInUser = session.getAttribute("loggedInUser");
-        if (!(loggedInUser instanceof User user)) {
+        if (!(loggedInUser instanceof User user) || user.getRole() != UserRole.JOB_SEEKER) {
             return "redirect:/login";
         }
 
@@ -84,7 +85,7 @@ public class ApplicationController {
     @PostMapping("/applications/submit")
     public String submitApplication(@ModelAttribute Application application, HttpSession session, Model model, RedirectAttributes redirectAttributes) {
         Object loggedInUser = session.getAttribute("loggedInUser");
-        if (!(loggedInUser instanceof User user)) {
+        if (!(loggedInUser instanceof User user) || user.getRole() != UserRole.JOB_SEEKER) {
             return "redirect:/login";
         }
 
@@ -130,7 +131,7 @@ public class ApplicationController {
     @GetMapping("/applications")
     public String myApplications(HttpSession session, Model model) {
         Object loggedInUser = session.getAttribute("loggedInUser");
-        if (!(loggedInUser instanceof User user)) {
+        if (!(loggedInUser instanceof User user) || user.getRole() != UserRole.JOB_SEEKER) {
             return "redirect:/login";
         }
 

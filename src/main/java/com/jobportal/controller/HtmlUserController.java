@@ -11,6 +11,7 @@ import com.jobportal.model.UserRole;
 import com.jobportal.services.UserService;
 
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
 public class HtmlUserController {
@@ -43,10 +44,13 @@ public class HtmlUserController {
             @ModelAttribute User user,
             Model model,
             RedirectAttributes redirectAttributes,
-            HttpSession session) {
+            HttpSession session,
+            HttpServletRequest request) {
 
         User authenticatedUser = userService.authenticateUser(user.getEmail(), user.getPassword());
         if (authenticatedUser != null) {
+            request.changeSessionId();
+            authenticatedUser.setPassword(null);
             session.setAttribute("loggedInUser", authenticatedUser);
             redirectAttributes.addFlashAttribute("message", "Login successful!");
             if (authenticatedUser.getRole() == UserRole.HR) {

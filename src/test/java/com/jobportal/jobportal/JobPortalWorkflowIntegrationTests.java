@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -28,6 +29,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
@@ -87,6 +89,87 @@ class JobPortalWorkflowIntegrationTests {
     @BeforeEach
     void setUp() {
         testRunId = TEST_MARKER + UUID.randomUUID();
+    }
+
+    @Test
+    void userRestRegistrationCannotChooseRoleOrReuseAnId() throws Exception {
+        String email = testRunId + ".registration@example.com";
+        mockMvc.perform(post("/users/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"id":999999,"name":"New user","email":"%s","password":"test-password","role":"ADMIN"}
+                                """.formatted(email)))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("JOB_SEEKER"))
+                .andExpect(contentDoesNotContain("password"));
+
+        User registered = userRepository.findAllByEmail(email).stream().findFirst().orElseThrow();
+        createdUserIds.add(registered.getId());
+        assertEquals(UserRole.JOB_SEEKER, registered.getRole());
+        assertTrue(registered.getId() != 999999L);
+    }
+
+    @Test
+    void userRestResponsesExcludePasswordsAndPutCannotChangeRoles() throws Exception {
+        User seeker = createUser("api-seeker", UserRole.JOB_SEEKER);
+        User otherHr = createUser("api-other-hr", UserRole.HR);
+        User admin = createUser("api-admin", UserRole.ADMIN);
+
+        mockMvc.perform(get("/users/{id}", seeker.getId()).session(sessionFor(seeker)))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(seeker.getEmail()))
+                .andExpect(contentDoesNotContain("password"));
+        mockMvc.perform(get("/users/{id}", otherHr.getId()).session(sessionFor(seeker)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/users"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/users").session(sessionFor(admin)))
+                .andExpect(status().isOk())
+                .andExpect(contentDoesNotContain("password"));
+
+        mockMvc.perform(put("/users/{id}", seeker.getId())
+                        .session(sessionFor(seeker))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Updated seeker","email":"%s","password":"new-test-password","role":"ADMIN"}
+                                """.formatted(seeker.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("JOB_SEEKER"))
+                .andExpect(contentDoesNotContain("password"));
+        assertEquals(UserRole.JOB_SEEKER, userRepository.findById(seeker.getId()).orElseThrow().getRole());
+
+        mockMvc.perform(put("/users/{id}", otherHr.getId())
+                        .session(sessionFor(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Updated HR","email":"%s","role":"ADMIN"}
+                                """.formatted(otherHr.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("HR"))
+                .andExpect(contentDoesNotContain("password"));
+        assertEquals(UserRole.HR, userRepository.findById(otherHr.getId()).orElseThrow().getRole());
+
+        mockMvc.perform(put("/users/{id}", otherHr.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/users/{id}", otherHr.getId()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void userRestLoginResponseDoesNotIncludePasswordData() throws Exception {
+        User user = createUser("api-login", UserRole.JOB_SEEKER);
+        mockMvc.perform(post("/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"%s","password":"password"}
+                                """.formatted(user.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("Login Successful"))
+                .andExpect(contentDoesNotContain("password"))
+                .andExpect(contentDoesNotContain("$2"));
     }
 
     @AfterEach

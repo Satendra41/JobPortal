@@ -31,6 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+# Local database and uploaded private documents
+*.db
+*.sqlite
+*.sqlite3
+/uploads/
+/target/test-uploads/
 # Local temporary files
 *.log
 compile_out.txt
