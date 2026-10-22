@@ -427,6 +427,51 @@ class JobPortalWorkflowIntegrationTests {
     }
 
     @Test
+    void publicJobsFilterByWorkModeAndPreserveOtherSelectedFilters() throws Exception {
+        User hr = createUser("work-mode-filter-hr", UserRole.HR);
+        Job matchingJob = createJobWithDetails(hr, "Java work mode match", "Northwind Labs", "Bangalore",
+                "3-5 years", "Full-time", "USD 100000", "Java, Spring Boot", LocalDate.of(2026, 1, 1));
+        matchingJob.setWorkMode("Hybrid");
+        jobRepository.save(matchingJob);
+        Job excludedJob = createJobWithDetails(hr, "Java work mode excluded", "Northwind Labs", "Bangalore",
+                "3-5 years", "Full-time", "USD 100000", "Java, Spring Boot", LocalDate.of(2026, 1, 1));
+        excludedJob.setWorkMode("Remote");
+        jobRepository.save(excludedJob);
+
+        mockMvc.perform(get("/jobs")
+                        .param("keyword", "Java")
+                        .param("location", "Bangalore")
+                        .param("company", "Northwind")
+                        .param("experience", "3-5")
+                        .param("workMode", "hybrid")
+                        .param("jobType", "Full-time")
+                        .param("minSalary", "90000")
+                        .param("maxSalary", "110000")
+                        .param("sort", "title"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("workMode", "Hybrid"))
+                .andExpect(model().attribute("hasFilters", true))
+                .andExpect(contentContains(matchingJob.getTitle()))
+                .andExpect(contentDoesNotContain(excludedJob.getTitle()))
+                .andExpect(contentContains("value=\"Hybrid\" selected=\"selected\""))
+                .andExpect(contentContains("href=\"/jobs\""))
+                .andExpect(contentContains("Clear Filters"));
+    }
+
+    @Test
+    void publicJobCardsDisplayWorkMode() throws Exception {
+        User hr = createUser("work-mode-display-hr", UserRole.HR);
+        Job job = createJob(hr, "Work mode display role");
+        job.setWorkMode("On-site");
+        jobRepository.save(job);
+
+        mockMvc.perform(get("/jobs"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains(job.getTitle()))
+                .andExpect(contentContains("On-site"));
+    }
+
+    @Test
     void publicJobFiltersByCompany() throws Exception {
         User hr = createUser("company-filter-hr", UserRole.HR);
         Job matchingJob = createJobWithDetails(hr, "Company filter result", "Northwind Labs", "Remote",

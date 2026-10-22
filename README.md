@@ -16,8 +16,7 @@ Administrators can manage users, jobs and applications.
 
 ### Job Seeker
 - Registration and login
-- Profile management
-- Resume upload
+- Profile management.
 - Search and filter jobs
 - Apply for jobs
 - Track application status

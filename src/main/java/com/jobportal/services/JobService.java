@@ -33,16 +33,27 @@ public class JobService {
      * remain available to their HR owner, but are not listed to visitors.
      */
     public List<Job> searchPublicJobs(String keyword) {
-        return searchPublicJobs(keyword, null, null, null, null, null, null, "newest");
+        return searchPublicJobs(keyword, null, null, null, null, null, null, null, "newest");
     }
 
     public List<Job> searchPublicJobs(String keyword, String location, String company, String experience,
             String jobType, String minSalary, String maxSalary, String sort) {
-        return searchJobs(keyword, location, company, experience, "ACTIVE", jobType, minSalary, maxSalary, sort);
+        return searchPublicJobs(keyword, location, company, experience, null, jobType, minSalary, maxSalary, sort);
+    }
+
+    public List<Job> searchPublicJobs(String keyword, String location, String company, String experience,
+            String workMode, String jobType, String minSalary, String maxSalary, String sort) {
+        return searchJobs(keyword, location, company, experience, "ACTIVE", workMode, jobType, minSalary, maxSalary,
+                sort);
     }
 
     public List<Job> searchJobs(String keyword, String location, String company, String experience,
             String status, String jobType, String minSalary, String maxSalary, String sort) {
+        return searchJobs(keyword, location, company, experience, status, null, jobType, minSalary, maxSalary, sort);
+    }
+
+    public List<Job> searchJobs(String keyword, String location, String company, String experience,
+            String status, String workMode, String jobType, String minSalary, String maxSalary, String sort) {
         Stream<Job> jobs = location == null || location.isBlank()
                 ? jobRepository.findAll().stream()
                 : jobRepository.findByLocationContainingIgnoreCase(location.trim()).stream();
@@ -51,6 +62,7 @@ public class JobService {
         jobs = filterContains(jobs, company, Job::getCompany);
         jobs = filterContains(jobs, experience, Job::getExperience);
         jobs = filterEqualsIgnoreCase(jobs, status, Job::getStatus);
+        jobs = filterEqualsIgnoreCase(jobs, workMode, Job::getWorkMode);
         jobs = filterContains(jobs, jobType, Job::getJobType);
         jobs = filterSalaryRange(jobs, minSalary, maxSalary);
 

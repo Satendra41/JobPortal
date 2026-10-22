@@ -24,6 +24,7 @@
                     <div class="col-md-4"><label class="form-label" for="location">Location</label><input class="form-control" id="location" name="location" th:value="${location}" placeholder="e.g. Bangalore"></div>
                     <div class="col-md-4"><label class="form-label" for="company">Company</label><input class="form-control" id="company" name="company" th:value="${company}" placeholder="Company name"></div>
                     <div class="col-md-3"><label class="form-label" for="experience">Experience</label><input class="form-control" id="experience" name="experience" th:value="${experience}" placeholder="e.g. 2-4 years"></div>
+                    <div class="col-md-3"><label class="form-label" for="workMode">Work mode</label><select class="form-select" id="workMode" name="workMode"><option value="" th:selected="${workMode == ''}">All</option><option value="On-site" th:selected="${workMode == 'On-site'}">On-site</option><option value="Hybrid" th:selected="${workMode == 'Hybrid'}">Hybrid</option><option value="Remote" th:selected="${workMode == 'Remote'}">Remote</option></select></div>
                     <div class="col-md-3"><label class="form-label" for="jobType">Job type</label><input class="form-control" id="jobType" name="jobType" th:value="${jobType}" placeholder="e.g. Full-time"></div>
                     <div class="col-md-2"><label class="form-label" for="minSalary">Min salary</label><input class="form-control" id="minSalary" type="number" min="0" step="any" name="minSalary" th:value="${minSalary}" placeholder="Amount"></div>
                     <div class="col-md-2"><label class="form-label" for="maxSalary">Max salary</label><input class="form-control" id="maxSalary" type="number" min="0" step="any" name="maxSalary" th:value="${maxSalary}" placeholder="Amount"></div>
@@ -42,6 +43,7 @@
                             <span class="badge job-badge" th:text="${job.jobType}">Full-time</span>
                             <small class="text-muted" th:text="${job.location}">Remote</small>
                         </div>
+                        <p class="mb-2" th:if="${job.workMode != null and !job.workMode.isBlank()}"><span class="badge text-bg-light" th:text="${job.workMode}">On-site</span></p>
                         <h5 th:text="${job.title}">Senior Java Developer</h5>
                         <p class="text-muted mb-3" th:text="${job.company}">ABC Technologies</p>
                         <p class="text-muted mb-3" th:text="${job.skills}">Java, Spring Boot, MySQL</p>

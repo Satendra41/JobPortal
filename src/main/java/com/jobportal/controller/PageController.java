@@ -80,6 +80,7 @@ public class PageController {
             @RequestParam(required = false) String location,
             @RequestParam(required = false) String company,
             @RequestParam(required = false) String experience,
+            @RequestParam(required = false) String workMode,
             @RequestParam(required = false) String jobType,
             @RequestParam(required = false) String minSalary,
             @RequestParam(required = false) String maxSalary,
@@ -89,29 +90,40 @@ public class PageController {
         String searchLocation = normalize(location);
         String searchCompany = normalize(company);
         String searchExperience = normalize(experience);
+        String searchWorkMode = normalizeWorkMode(workMode);
         String searchJobType = normalize(jobType);
         String searchMinSalary = normalize(minSalary);
         String searchMaxSalary = normalize(maxSalary);
         String searchSort = normalizeSort(sort);
 
         model.addAttribute("jobs", jobService.searchPublicJobs(searchKeyword, searchLocation, searchCompany,
-                searchExperience, searchJobType, searchMinSalary, searchMaxSalary, searchSort));
+                searchExperience, searchWorkMode, searchJobType, searchMinSalary, searchMaxSalary, searchSort));
         model.addAttribute("keyword", searchKeyword);
         model.addAttribute("location", searchLocation);
         model.addAttribute("company", searchCompany);
         model.addAttribute("experience", searchExperience);
+        model.addAttribute("workMode", searchWorkMode);
         model.addAttribute("jobType", searchJobType);
         model.addAttribute("minSalary", searchMinSalary);
         model.addAttribute("maxSalary", searchMaxSalary);
         model.addAttribute("sort", searchSort);
         model.addAttribute("hasFilters", !searchKeyword.isEmpty() || !searchLocation.isEmpty() || !searchCompany.isEmpty()
                 || !searchExperience.isEmpty() || !searchJobType.isEmpty() || !searchMinSalary.isEmpty()
-                || !searchMaxSalary.isEmpty());
+                || !searchMaxSalary.isEmpty() || !searchWorkMode.isEmpty());
         return "jobs";
     }
 
     private String normalize(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private String normalizeWorkMode(String workMode) {
+        return switch (normalize(workMode).toLowerCase(Locale.ROOT)) {
+            case "on-site" -> "On-site";
+            case "hybrid" -> "Hybrid";
+            case "remote" -> "Remote";
+            default -> "";
+        };
     }
 
     private String normalizeSort(String sort) {
