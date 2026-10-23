@@ -11,20 +11,21 @@
 <body>
 <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
 
-<section class="py-5">
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="fw-bold">My Applications</h2>
-                <p class="text-muted">Review the roles you have applied for and check the status.</p>
+<section class="py-5 my-applications-page">
+    <div class="container applications-container">
+        <div class="d-flex justify-content-between align-items-center mb-4 applications-page-header">
+            <div class="applications-heading-copy">
+                <span class="applications-page-kicker">Your job search</span>
+                <h1 class="fw-bold">My Applications</h1>
+                <p class="text-muted mb-0">Review the roles you have applied for and check the status.</p>
             </div>
             <a href="/jobs" class="btn btn-outline-primary">Browse more jobs</a>
         </div>
 
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-4">
-                <div class="table-responsive">
-                    <table class="table align-middle">
+        <div class="card shadow-sm border-0 applications-card">
+            <div class="card-body p-4 applications-card-body">
+                <div class="table-responsive applications-table-responsive">
+                    <table class="table align-middle applications-table">
                         <thead>
                         <tr>
                             <th>Job title</th>
@@ -36,16 +37,22 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <tr th:each="app : ${applications}">
+                        <tr class="application-row" th:each="app : ${applications}">
                             <td th:text="${jobMap[app.jobId]?.title}">Job title</td>
                             <td th:text="${jobMap[app.jobId]?.company}">Company</td>
                             <td th:text="${jobMap[app.jobId]?.location}">Location</td>
                             <td th:text="${app.appliedDate}">2026-08-10</td>
-                            <td><span class="badge" th:classappend="${app.status == 'APPLIED' ? 'bg-primary' : (app.status == 'SHORTLISTED' ? 'bg-info text-dark' : (app.status == 'INTERVIEW' ? 'bg-warning text-dark' : (app.status == 'SELECTED' ? 'bg-success' : 'bg-danger')))}" th:text="${app.status}">APPLIED</span></td>
+                            <td><span class="badge application-status-badge" th:classappend="${app.status == 'APPLIED' ? 'bg-primary' : (app.status == 'SHORTLISTED' ? 'bg-info text-dark' : (app.status == 'INTERVIEW' ? 'bg-warning text-dark' : (app.status == 'SELECTED' ? 'bg-success' : 'bg-danger')))}" th:text="${app.status}">APPLIED</span></td>
                             <td><a class="btn btn-sm btn-outline-primary" th:if="${jobMap[app.jobId] != null}" th:href="@{'/jobs/' + ${app.jobId}}">View job</a></td>
                         </tr>
-                        <tr th:if="${#lists.isEmpty(applications)}">
-                            <td colspan="6" class="text-center text-muted py-4">You haven't applied to any jobs yet. <a href="/jobs" class="btn btn-sm btn-outline-primary ms-2">Browse Jobs</a></td>
+                        <tr class="applications-empty-row" th:if="${#lists.isEmpty(applications)}">
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <div class="applications-empty-state">
+                                    <span class="applications-empty-icon" aria-hidden="true"><i class="fas fa-folder-open"></i></span>
+                                    <p class="mb-3">You haven't applied to any jobs yet.</p>
+                                    <a href="/jobs" class="btn btn-sm btn-outline-primary ms-2">Browse Jobs</a>
+                                </div>
+                            </td>
                         </tr>
                         </tbody>
                     </table>

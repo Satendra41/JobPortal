@@ -13,68 +13,70 @@
 <body>
 <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
 
-<header class="hero-section text-white d-flex align-items-center">
-    <div class="container py-5">
-        <div class="row align-items-center">
-            <div class="col-lg-7">
-                <h1 class="display-5 fw-bold">Launch your next career move.</h1>
-                <p class="lead mb-4">Explore jobs, manage your profile, and apply for roles with a modern job portal
+<header class="home-hero">
+    <div class="container home-hero-container">
+        <div class="row">
+            <div class="col-lg-9 col-xl-8 home-hero-copy">
+                <span class="home-hero-kicker">Your next opportunity starts here</span>
+                <h1 class="display-3 fw-bold">Launch your next career move.</h1>
+                <p class="lead">Explore jobs, manage your profile, and apply for roles with a modern job portal
                     experience.</p>
-                <div class="d-flex gap-2 flex-wrap">
-                    <a class="btn btn-light btn-lg" href="/jobs">Browse Jobs</a>
-                    <a class="btn btn-outline-light btn-lg" href="/register">Create Account</a>
+                <div class="d-flex gap-3 flex-wrap home-hero-actions">
+                    <a class="btn btn-primary btn-lg" href="/jobs">Browse Jobs</a>
+                    <a class="btn btn-outline-primary btn-lg" href="/register">Create Account</a>
                 </div>
             </div>
-            <div class="col-lg-5 mt-5 mt-lg-0">
-                <div class="card hero-card shadow-lg p-4">
-                    <h5 class="mb-3">Looking for opportunities?</h5>
-                    <form>
-                        <div class="mb-3">
-                            <label class="form-label text-white-75">Search role</label>
-                            <input class="form-control" type="search" placeholder="e.g. Java Developer">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-white-75">Location</label>
-                            <input class="form-control" type="text" placeholder="Remote, New York, London">
-                        </div>
-                        <button class="btn btn-primary w-100" type="button">Search jobs</button>
-                    </form>
-                </div>
+        </div>
+        <div class="card home-search-card">
+            <div class="home-search-heading">
+                <h2 class="h5 fw-bold mb-1">Looking for opportunities?</h2>
+                <p class="text-muted mb-0">Search by role and location</p>
             </div>
+            <form class="home-search-form" th:action="@{/jobs}" method="get">
+                <div class="home-search-field">
+                    <label class="form-label">Search role</label>
+                    <input class="form-control" type="search" name="keyword" placeholder="e.g. Java Developer">
+                </div>
+                <div class="home-search-field">
+                    <label class="form-label">Location</label>
+                    <input class="form-control" type="text" name="location" placeholder="Remote, New York, London">
+                </div>
+                <button class="btn btn-primary home-search-button" type="submit">Search jobs</button>
+            </form>
         </div>
     </div>
 </header>
 
-<section class="py-5">
+<section class="py-5 home-feature-section">
     <div class="container">
-        <div class="text-center mb-5">
+        <div class="home-feature-heading">
             <span class="badge bg-primary bg-opacity-10 text-primary mb-2">Why JobPortal</span>
             <h2 class="fw-bold">A professional experience for modern job seekers</h2>
-            <p class="text-muted">Responsive design, intuitive navigation, and polished visuals for every device.</p>
+            <p class="text-muted mb-0">Responsive design, intuitive navigation, and polished visuals for every device.</p>
         </div>
         <div class="row g-4">
             <div class="col-md-4">
-                <div class="card h-100 shadow-sm border-0">
-                    <div class="card-body">
-                        <div class="mb-3 text-primary"><i class="fas fa-briefcase fa-2x"></i></div>
+                <div class="card home-feature-card h-100 shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <div class="home-feature-icon mb-3"><i class="fas fa-briefcase" aria-hidden="true"></i></div>
                         <h5>Explore jobs</h5>
                         <p class="text-muted">Browse curated roles across tech, design, product, and more.</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card h-100 shadow-sm border-0">
-                    <div class="card-body">
-                        <div class="mb-3 text-primary"><i class="fas fa-user-check fa-2x"></i></div>
+                <div class="card home-feature-card h-100 shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <div class="home-feature-icon mb-3"><i class="fas fa-user-check" aria-hidden="true"></i></div>
                         <h5>Secure applications</h5>
                         <p class="text-muted">Track applications and keep your profile information up to date.</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card h-100 shadow-sm border-0">
-                    <div class="card-body">
-                        <div class="mb-3 text-primary"><i class="fas fa-chart-line fa-2x"></i></div>
+                <div class="card home-feature-card h-100 shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <div class="home-feature-icon mb-3"><i class="fas fa-chart-line" aria-hidden="true"></i></div>
                         <h5>Career growth</h5>
                         <p class="text-muted">Connect with recruiters and find the right role for your next step.</p>
                     </div>

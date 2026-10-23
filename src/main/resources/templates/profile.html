@@ -11,61 +11,71 @@
 <body>
 <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
 
-<section class="py-5">
-    <div class="container">
-        <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="card profile-card shadow-sm border-0">
-                    <div class="card-body p-5 text-center">
+<section class="py-5 job-seeker-profile">
+    <div class="container profile-container">
+        <div class="row g-4 profile-layout">
+            <div class="col-lg-4 profile-summary-column">
+                <div class="card profile-card shadow-sm border-0 profile-summary-card">
+                    <div class="card-body p-5 text-center profile-summary-body">
                         <div class="avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 90px; height: 90px;">
                             <i class="fas fa-user fa-2x"></i>
                         </div>
                         <h4 class="fw-bold" th:text="${user.name}">Your name</h4>
                         <p class="text-muted mb-3" th:text="${profile.headline != null ? profile.headline : 'Job Seeker'}">Job Seeker</p>
-                        <a class="btn btn-outline-primary w-100 mb-2" th:if="${profile.resumePath != null}" href="/profile/resume">View resume</a>
-                        <a class="btn btn-outline-secondary w-100 mb-2" th:if="${profile.resumePath != null}" href="/profile/resume?download=true">Download resume</a>
-                        <a class="btn btn-outline-primary w-100" href="/dashboard">Back to dashboard</a>
+                        <div class="profile-summary-actions">
+                            <a class="btn btn-outline-primary w-100 mb-2" th:if="${profile.resumePath != null}" href="/profile/resume">View resume</a>
+                            <a class="btn btn-outline-secondary w-100 mb-2" th:if="${profile.resumePath != null}" href="/profile/resume?download=true">Download resume</a>
+                            <a class="btn btn-outline-primary w-100" href="/dashboard">Back to dashboard</a>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-8">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body p-5">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h2 class="fw-bold">Profile details</h2>
+            <div class="col-lg-8 profile-form-column">
+                <div class="card shadow-sm border-0 profile-form-card">
+                    <div class="card-body p-5 profile-form-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4 profile-form-heading">
+                            <div>
+                                <span class="profile-page-kicker">Your professional profile</span>
+                                <h1 class="fw-bold mb-0">Profile details</h1>
+                            </div>
                             <span class="badge bg-primary bg-opacity-10 text-primary">Job Seeker</span>
                         </div>
                         <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
                         <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-                        <form method="post" action="/profile" enctype="multipart/form-data" th:object="${profile}">
-                        <div class="row g-3">
-                            <div class="col-md-6">
+                        <form method="post" action="/profile" enctype="multipart/form-data" th:object="${profile}" class="profile-edit-form">
+                        <div class="row g-3 profile-form-grid">
+                            <div class="col-md-6 profile-field">
                                 <label class="form-label" for="name">Name</label>
                                 <input class="form-control" id="name" name="name" th:value="${user.name}" required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 profile-field">
                                 <label class="form-label" for="email">Email</label>
                                 <input class="form-control" id="email" th:value="${user.email}" readonly>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 profile-field">
                                 <label class="form-label" for="phone">Phone</label>
                                 <input class="form-control" id="phone" th:field="*{phone}" maxlength="30" pattern="[0-9+() .-]{7,30}">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 profile-field">
                                 <label class="form-label" for="location">Location</label>
                                 <input class="form-control" id="location" th:field="*{location}" maxlength="120">
                             </div>
-                            <div class="col-12"><label class="form-label" for="headline">Professional headline</label><input class="form-control" id="headline" th:field="*{headline}" maxlength="160"></div>
-                            <div class="col-md-6"><label class="form-label" for="skills">Skills</label><textarea class="form-control" id="skills" th:field="*{skills}" rows="3" maxlength="1000"></textarea></div>
-                            <div class="col-md-6"><label class="form-label" for="education">Education</label><textarea class="form-control" id="education" th:field="*{education}" rows="3" maxlength="1000"></textarea></div>
-                            <div class="col-12"><label class="form-label" for="experience">Experience</label><textarea class="form-control" id="experience" th:field="*{experience}" rows="3" maxlength="2000"></textarea></div>
+                            <div class="col-12 profile-field"><label class="form-label" for="headline">Professional headline</label><input class="form-control" id="headline" th:field="*{headline}" maxlength="160"></div>
+                            <div class="col-md-6 profile-field"><label class="form-label" for="skills">Skills</label><textarea class="form-control" id="skills" th:field="*{skills}" rows="3" maxlength="1000"></textarea></div>
+                            <div class="col-md-6 profile-field"><label class="form-label" for="education">Education</label><textarea class="form-control" id="education" th:field="*{education}" rows="3" maxlength="1000"></textarea></div>
+                            <div class="col-12 profile-field"><label class="form-label" for="experience">Experience</label><textarea class="form-control" id="experience" th:field="*{experience}" rows="3" maxlength="2000"></textarea></div>
                         </div>
-                        <hr>
-                        <h5>Resume</h5>
-                        <p class="text-muted" th:if="${profile.resumePath == null}">No resume uploaded yet.</p>
-                        <p class="text-muted" th:if="${profile.resumePath != null}">Resume uploaded. Upload a new PDF to replace it.</p>
-                        <input class="form-control" type="file" id="resumeFile" name="resumeFile" accept="application/pdf,.pdf">
-                        <div class="mt-4"><button class="btn btn-primary" type="submit">Save profile</button><a class="btn btn-outline-secondary ms-2" href="/dashboard">Cancel</a></div>
+                        <section class="profile-resume-section">
+                            <div class="profile-resume-heading">
+                                <h2 class="h5 fw-bold mb-1">Resume</h2>
+                                <p class="text-muted mb-0">Upload a PDF to keep your application materials current.</p>
+                            </div>
+                            <p class="text-muted" th:if="${profile.resumePath == null}">No resume uploaded yet.</p>
+                            <p class="text-muted" th:if="${profile.resumePath != null}">Resume uploaded. Upload a new PDF to replace it.</p>
+                            <label class="form-label" for="resumeFile">PDF resume</label>
+                            <input class="form-control" type="file" id="resumeFile" name="resumeFile" accept="application/pdf,.pdf">
+                        </section>
+                        <div class="mt-4 profile-form-actions"><button class="btn btn-primary" type="submit">Save profile</button><a class="btn btn-outline-secondary ms-2" href="/dashboard">Cancel</a></div>
                         </form>
                     </div>
                 </div>

@@ -4,12 +4,13 @@
 <body>
 
 <nav th:fragment="mainNavigation"
+     th:with="brandText=${brandText} ?: 'JobPortal', brandHref=${brandHref} ?: '/', contextHref=${contextHref} ?: '', contextLabel=${contextLabel} ?: ''"
      class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
 
     <div class="container">
 
         <!-- Brand -->
-        <a class="navbar-brand" href="/">
+        <a class="navbar-brand" th:href="${brandHref}" th:text="${brandText}">
             JobPortal
         </a>
 
@@ -33,6 +34,12 @@
         <div class="collapse navbar-collapse" id="navbarNav">
 
             <ul class="navbar-nav ms-auto">
+
+                <li class="nav-item" th:if="${contextHref != '' and contextLabel != ''}">
+                    <a class="nav-link" th:href="${contextHref}" th:text="${contextLabel}">
+                        Back
+                    </a>
+                </li>
 
 
                 <!-- ==================== -->
@@ -177,8 +184,8 @@
                         </a>
                     </li>
 
-                    <li class="nav-item">
-                        <a class="nav-link" href="/hr/jobs">
+                    <li class="nav-item" th:if="${job != null and job.id != null and contextHref == ''}">
+                        <a class="nav-link" th:href="@{'/hr/jobs/' + ${job.id} + '/applications'}">
                             Applicants
                         </a>
                     </li>
@@ -199,7 +206,7 @@
                 <th:block
                     th:if="${session.loggedInUser != null and session.loggedInUser.role.name() == 'ADMIN'}">
 
-                    <li class="nav-item">
+                    <li class="nav-item" th:if="${brandHref != '/admin/dashboard'}">
                         <a class="nav-link" href="/admin/dashboard">
                             Admin Dashboard
                         </a>

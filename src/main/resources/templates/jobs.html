@@ -11,15 +11,16 @@
 <body>
 <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
 
-<section class="py-5">
-    <div class="container">
-        <div class="mb-4">
+<section class="py-5 jobs-page">
+    <div class="container jobs-page-container">
+        <div class="jobs-page-header">
             <div>
-                <h2 class="fw-bold">Available jobs</h2>
-                <p class="text-muted">Browse roles across engineering, design, and product teams.</p>
+                <span class="jobs-page-kicker">Job opportunities</span>
+                <h1 class="fw-bold">Available jobs</h1>
+                <p class="text-muted mb-0">Browse roles across engineering, design, and product teams.</p>
             </div>
-            <form method="get" th:action="@{/jobs}" class="card card-body border-0 shadow-sm">
-                <div class="row g-3">
+            <form method="get" th:action="@{/jobs}" class="card card-body jobs-filter-card shadow-sm">
+                <div class="row g-3 jobs-filter-grid">
                     <div class="col-md-4"><label class="form-label" for="keyword">Keyword</label><input class="form-control" id="keyword" type="search" name="keyword" th:value="${keyword}" placeholder="Title, skill, or description"></div>
                     <div class="col-md-4"><label class="form-label" for="location">Location</label><input class="form-control" id="location" name="location" th:value="${location}" placeholder="e.g. Bangalore"></div>
                     <div class="col-md-4"><label class="form-label" for="company">Company</label><input class="form-control" id="company" name="company" th:value="${company}" placeholder="Company name"></div>
@@ -31,27 +32,27 @@
                     <div class="col-md-2"><label class="form-label" for="sort">Sort by</label><select class="form-select" id="sort" name="sort"><option value="newest" th:selected="${sort == 'newest'}">Newest</option><option value="oldest" th:selected="${sort == 'oldest'}">Oldest</option><option value="title" th:selected="${sort == 'title'}">Title A-Z</option></select></div>
                 </div>
                 <p class="form-text mb-3">Salary range compares the numeric amount listed for a job.</p>
-                <div><button class="btn btn-primary" type="submit"><i class="fas fa-search me-2"></i>Search</button> <a class="btn btn-outline-secondary" th:href="@{/jobs}">Clear Filters</a></div>
+                <div class="jobs-filter-actions"><button class="btn btn-primary" type="submit"><i class="fas fa-search me-2"></i>Search</button> <a class="btn btn-outline-secondary" th:href="@{/jobs}">Clear Filters</a></div>
             </form>
         </div>
-        <p class="text-muted" th:if="${hasFilters and #lists.isEmpty(jobs)}">No jobs found matching your search.</p>
-        <div class="row g-4">
+        <p class="jobs-empty-state text-muted" th:if="${hasFilters and #lists.isEmpty(jobs)}">No jobs found matching your search.</p>
+        <div class="row g-4 jobs-results">
             <div class="col-lg-6" th:each="job : ${jobs}">
-                <div class="card job-card shadow-sm border-0">
+                <div class="card job-card jobs-list-card shadow-sm border-0">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-3 jobs-card-meta">
                             <span class="badge job-badge" th:text="${job.jobType}">Full-time</span>
                             <small class="text-muted" th:text="${job.location}">Remote</small>
                         </div>
-                        <p class="mb-2" th:if="${job.workMode != null and !job.workMode.isBlank()}"><span class="badge text-bg-light" th:text="${job.workMode}">On-site</span></p>
-                        <h5 th:text="${job.title}">Senior Java Developer</h5>
-                        <p class="text-muted mb-3" th:text="${job.company}">ABC Technologies</p>
-                        <p class="text-muted mb-3" th:text="${job.skills}">Java, Spring Boot, MySQL</p>
-                        <div class="d-flex justify-content-between align-items-center">
+                        <p class="mb-2 jobs-card-work-mode" th:if="${job.workMode != null and !job.workMode.isBlank()}"><span class="badge text-bg-light" th:text="${job.workMode}">On-site</span></p>
+                        <h2 class="h5 jobs-card-title" th:text="${job.title}">Senior Java Developer</h2>
+                        <p class="text-muted mb-3 jobs-card-company" th:text="${job.company}">ABC Technologies</p>
+                        <p class="text-muted mb-3 jobs-card-skills" th:text="${job.skills}">Java, Spring Boot, MySQL</p>
+                        <div class="d-flex justify-content-between align-items-center jobs-card-actions">
                             <a th:href="@{'/jobs/' + ${job.id}}" class="btn btn-outline-primary">View details</a>
                             <small class="text-muted" th:text="${job.postedDate}">3 days ago</small>
                         </div>
-                        <div class="mt-3">
+                        <div class="mt-3 jobs-card-salary">
                             <span class="fw-bold">Salary:</span>
                             <span class="text-muted" th:text="${job.salary}">₹6 LPA</span>
                         </div>

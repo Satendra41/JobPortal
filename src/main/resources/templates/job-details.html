@@ -21,22 +21,22 @@
 
 <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
 
-<section class="py-5">
-    <div class="container">
+<section class="py-5 job-details-page">
+    <div class="container job-details-container">
 
-        <div class="row gy-4">
+        <div class="row gy-4 job-details-layout">
 
             <!-- Main Job Information -->
-            <div class="col-lg-8">
+            <div class="col-lg-8 job-details-main">
 
-                <div class="card shadow-sm border-0">
-                    <div class="card-body p-5">
+                <div class="card shadow-sm border-0 job-primary-card">
+                    <div class="card-body p-5 job-primary-body">
 
-                        <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-3 job-details-heading">
 
                             <div>
 
-                                <h2 class="fw-bold mb-1"
+                                <h2 class="fw-bold mb-1 job-details-title"
                                     th:text="${job.title}">
                                     Senior Java Developer
                                 </h2>
@@ -46,7 +46,7 @@
                                      th:text="${alreadyAppliedMessage}">
                                 </div>
 
-                                <p class="text-muted mb-0">
+                                <p class="text-muted mb-0 job-details-meta">
                                     <span th:text="${job.company}">
                                         Acme Corp
                                     </span>
@@ -69,12 +69,12 @@
 
                         </div>
 
-                        <hr>
+                        <hr class="job-details-divider">
 
                         <!-- Job Description -->
-                        <h5>Job description</h5>
+                        <h5 class="job-section-title">Job description</h5>
 
-                        <p class="text-muted"
+                        <p class="text-muted job-description"
                            th:text="${job.description}">
                             Drive backend engineering efforts with Spring Boot
                             and microservices. Collaborate with product and
@@ -82,10 +82,10 @@
                         </p>
 
                         <!-- Skills and Salary -->
-                        <div class="row gy-3">
+                        <div class="row gy-3 job-highlights">
 
-                            <div class="col-md-6">
-                                <h6>Skills</h6>
+                            <div class="col-md-6 job-highlight-item">
+                                <h6 class="job-section-title">Skills</h6>
 
                                 <p class="text-muted"
                                    th:text="${job.skills}">
@@ -93,8 +93,8 @@
                                 </p>
                             </div>
 
-                            <div class="col-md-6">
-                                <h6>Salary</h6>
+                            <div class="col-md-6 job-highlight-item">
+                                <h6 class="job-section-title">Salary</h6>
 
                                 <p class="text-muted"
                                    th:text="${job.salary}">
@@ -105,7 +105,7 @@
                         </div>
 
                         <!-- Buttons -->
-                        <div class="mt-4 d-flex flex-wrap gap-2">
+                        <div class="mt-4 d-flex flex-wrap gap-2 job-action-area">
 
                             <a class="btn btn-primary"
                                th:if="${job.status != 'CLOSED'}"
@@ -157,17 +157,17 @@
             </div>
 
             <!-- Job Details -->
-            <div class="col-lg-4">
+            <div class="col-lg-4 job-details-sidebar">
 
-                <div class="card shadow-sm border-0">
+                <div class="card shadow-sm border-0 job-facts-card">
 
                     <div class="card-body p-4">
 
-                        <h5 class="fw-bold mb-3">
+                        <h5 class="fw-bold mb-3 job-facts-title">
                             Job details
                         </h5>
 
-                        <ul class="list-unstyled text-muted">
+                        <ul class="list-unstyled text-muted job-facts-list">
 
                             <li class="mb-2">
                                 <strong>Location:</strong>
@@ -207,7 +207,7 @@
 
                         </ul>
 
-                        <div class="border-top pt-3">
+                        <div class="border-top pt-3 job-support-area">
 
                             <p class="mb-2 text-muted">
                                 Need help?

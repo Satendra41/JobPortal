@@ -11,23 +11,65 @@
 <body>
 <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
 
-<section class="py-5">
-    <div class="container">
-        <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
-        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-        <div class="mb-4"><h2 class="fw-bold">HR Dashboard</h2><p class="text-muted mb-1">Welcome, <span th:text="${userName}">HR user</span></p><p class="text-muted">Role: HR</p></div>
-        <div class="row g-3 mb-5">
-            <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><p class="text-muted mb-1">Total jobs</p><h3 th:text="${totalJobs}">0</h3></div></div></div>
-            <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><p class="text-muted mb-1">Active jobs</p><h3 th:text="${activeJobs}">0</h3></div></div></div>
-            <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><p class="text-muted mb-1">Closed jobs</p><h3 th:text="${closedJobs}">0</h3></div></div></div>
-            <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><p class="text-muted mb-1">Applications</p><h3 th:text="${totalApplications}">0</h3></div></div></div>
+<section class="py-5 hr-dashboard-page">
+    <div class="container hr-dashboard-container">
+        <div th:if="${message}" class="alert alert-success hr-dashboard-feedback" th:text="${message}"></div>
+        <div th:if="${error}" class="alert alert-danger hr-dashboard-feedback" th:text="${error}"></div>
+
+        <div class="hr-dashboard-header mb-4">
+            <div>
+                <span class="hr-dashboard-kicker">HR workspace</span>
+                <h1 class="fw-bold hr-dashboard-title">HR Dashboard</h1>
+                <p class="text-muted mb-1">Welcome, <span th:text="${userName}">HR user</span></p>
+                <p class="text-muted mb-0">Role: HR</p>
+            </div>
         </div>
-        <div class="d-flex justify-content-between align-items-center mb-3"><h4 class="fw-bold mb-0">My jobs</h4><a class="btn btn-outline-primary btn-sm" href="/hr/jobs/new">Post a job</a></div>
-        <div class="card shadow-sm border-0"><div class="card-body"><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Type</th><th>Posted</th><th>Deadline</th><th>Status</th><th>Applications</th><th>Actions</th></tr></thead><tbody>
-            <tr th:each="job : ${jobs}"><td th:text="${job.title}">Job title</td><td th:text="${job.company}">Company</td><td th:text="${job.location}">Location</td><td th:text="${job.jobType}">Full-time</td><td th:text="${job.postedDate}">2026-09-04</td><td th:text="${job.applicationDeadline != null ? job.applicationDeadline : '-'}">-</td><td><span class="badge" th:classappend="${job.status == 'ACTIVE' ? 'bg-success' : 'bg-secondary'}" th:text="${job.status}">ACTIVE</span></td><td th:text="${applicationCounts[job.id]}">0</td><td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" th:href="@{'/jobs/' + ${job.id}}">View</a> <a class="btn btn-sm btn-outline-secondary" th:href="@{'/hr/jobs/' + ${job.id} + '/edit'}">Edit</a> <form th:if="${job.status == 'ACTIVE'}" class="d-inline" method="post" th:action="@{'/hr/jobs/' + ${job.id} + '/close'}"><button class="btn btn-sm btn-outline-danger" type="submit">Close</button></form> <a class="btn btn-sm btn-outline-dark" th:href="@{'/hr/jobs/' + ${job.id} + '/applications'}">Applicants</a></td></tr>
-            <tr th:if="${#lists.isEmpty(jobs)}"><td colspan="9" class="text-center text-muted py-4">You have not posted any jobs yet.</td></tr>
-        </tbody></table></div></div></div>
+
+        <div class="row g-3 mb-5 hr-dashboard-stats">
+            <div class="col-sm-6 col-xl-3 hr-stat-column"><div class="card shadow-sm border-0 hr-stat-card hr-stat-total"><div class="card-body"><p class="text-muted mb-1 hr-stat-label">Total jobs</p><h3 class="hr-stat-value" th:text="${totalJobs}">0</h3></div></div></div>
+            <div class="col-sm-6 col-xl-3 hr-stat-column"><div class="card shadow-sm border-0 hr-stat-card hr-stat-active"><div class="card-body"><p class="text-muted mb-1 hr-stat-label">Active jobs</p><h3 class="hr-stat-value" th:text="${activeJobs}">0</h3></div></div></div>
+            <div class="col-sm-6 col-xl-3 hr-stat-column"><div class="card shadow-sm border-0 hr-stat-card hr-stat-closed"><div class="card-body"><p class="text-muted mb-1 hr-stat-label">Closed jobs</p><h3 class="hr-stat-value" th:text="${closedJobs}">0</h3></div></div></div>
+            <div class="col-sm-6 col-xl-3 hr-stat-column"><div class="card shadow-sm border-0 hr-stat-card hr-stat-applications"><div class="card-body"><p class="text-muted mb-1 hr-stat-label">Applications</p><h3 class="hr-stat-value" th:text="${totalApplications}">0</h3></div></div></div>
+        </div>
+
+        <div class="hr-dashboard-jobs-heading d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h2 class="fw-bold mb-1">My jobs</h2>
+                <p class="text-muted mb-0">Review your postings and applicant activity.</p>
+            </div>
+            <a class="btn btn-primary hr-dashboard-post-job" href="/hr/jobs/new">Post a job</a>
+        </div>
+
+        <div class="card shadow-sm border-0 hr-dashboard-table-card">
+            <div class="card-body hr-dashboard-table-body">
+                <div class="table-responsive hr-jobs-table-wrap">
+                    <table class="table align-middle hr-jobs-table hr-dashboard-table">
+                        <thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Type</th><th>Posted</th><th>Deadline</th><th>Status</th><th>Applications</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            <tr th:each="job : ${jobs}">
+                                <td class="hr-job-title" th:text="${job.title}">Job title</td>
+                                <td th:text="${job.company}">Company</td>
+                                <td th:text="${job.location}">Location</td>
+                                <td th:text="${job.jobType}">Full-time</td>
+                                <td th:text="${job.postedDate}">2026-09-04</td>
+                                <td th:text="${job.applicationDeadline != null ? job.applicationDeadline : '-'}">-</td>
+                                <td><span class="badge" th:classappend="${job.status == 'ACTIVE' ? 'bg-success' : 'bg-secondary'}" th:text="${job.status}">ACTIVE</span></td>
+                                <td th:text="${applicationCounts[job.id]}">0</td>
+                                <td class="text-nowrap hr-job-actions">
+                                    <a class="btn btn-sm btn-outline-primary hr-job-view" th:href="@{'/jobs/' + ${job.id}}">View</a>
+                                    <a class="btn btn-sm btn-outline-secondary hr-job-edit" th:href="@{'/hr/jobs/' + ${job.id} + '/edit'}">Edit</a>
+                                    <form th:if="${job.status == 'ACTIVE'}" class="d-inline hr-job-close-form" method="post" th:action="@{'/hr/jobs/' + ${job.id} + '/close'}"><button class="btn btn-sm btn-outline-danger hr-job-close" type="submit">Close</button></form>
+                                    <a class="btn btn-sm btn-outline-dark hr-job-applicants" th:href="@{'/hr/jobs/' + ${job.id} + '/applications'}">Applicants</a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(jobs)}" class="hr-jobs-empty-row"><td colspan="9" class="text-center text-muted py-4">You have not posted any jobs yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 </body>
 </html>

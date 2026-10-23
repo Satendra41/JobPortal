@@ -11,48 +11,52 @@
 <body>
 <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
 
-<section class="py-5">
-    <div class="container">
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body p-5">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
+<section class="py-5 job-seeker-dashboard">
+    <div class="container dashboard-container">
+        <div class="row g-4 dashboard-layout">
+            <div class="col-lg-8 dashboard-main-column">
+                <div class="card shadow-sm border-0 dashboard-overview-card">
+                    <div class="card-body p-5 dashboard-overview-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4 dashboard-heading">
                             <div>
                                 <h2 class="fw-bold mb-1">Dashboard</h2>
                                 <p class="text-muted mb-0">Your job activity and latest updates.</p>
                                 <h5 th:if="${userName}" class="fw-semibold mt-3">Welcome back, <span th:text="${userName}"></span>!</h5>
                             </div>
-                            <span class="badge bg-primary bg-opacity-10 text-primary py-2 px-3">Job Seeker</span>
+                            <span class="badge bg-primary bg-opacity-10 text-primary py-2 px-3 dashboard-role-badge">Job Seeker</span>
                         </div>
-                        <div class="row g-4">
-                            <div class="col-md-4">
-                                <div class="card border-0 shadow-sm py-4 text-center">
+                        <div class="row g-3 dashboard-stats-grid">
+                            <div class="col-12 col-sm-6">
+                                <div class="card border-0 shadow-sm py-4 text-center dashboard-stat-card dashboard-stat-applications">
                                     <div class="card-body">
+                                        <span class="dashboard-stat-icon"><i class="fas fa-paper-plane" aria-hidden="true"></i></span>
                                         <h3 class="fw-bold" th:text="${applicationCount}">0</h3>
                                         <p class="text-muted mb-0">Applications</p>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="card border-0 shadow-sm py-4 text-center">
+                            <div class="col-12 col-sm-6">
+                                <div class="card border-0 shadow-sm py-4 text-center dashboard-stat-card dashboard-stat-selected">
                                     <div class="card-body">
+                                        <span class="dashboard-stat-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></span>
                                         <h3 class="fw-bold" th:text="${selectedCount}">0</h3>
                                         <p class="text-muted mb-0">Selected</p>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="card border-0 shadow-sm py-4 text-center">
+                            <div class="col-12 col-sm-6">
+                                <div class="card border-0 shadow-sm py-4 text-center dashboard-stat-card dashboard-stat-interviews">
                                     <div class="card-body">
+                                        <span class="dashboard-stat-icon"><i class="fas fa-comments" aria-hidden="true"></i></span>
                                         <h3 class="fw-bold" th:text="${interviewCount}">0</h3>
                                         <p class="text-muted mb-0">Interviews</p>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="card border-0 shadow-sm py-4 text-center">
+                            <div class="col-12 col-sm-6">
+                                <div class="card border-0 shadow-sm py-4 text-center dashboard-stat-card dashboard-stat-saved">
                                     <div class="card-body">
+                                        <span class="dashboard-stat-icon"><i class="fas fa-bookmark" aria-hidden="true"></i></span>
                                         <h3 class="fw-bold" th:text="${savedJobCount}">0</h3>
                                         <p class="text-muted mb-0">Saved Jobs</p>
                                     </div>
@@ -61,18 +65,20 @@
                         </div>
                     </div>
                 </div>
-                <div class="card shadow-sm border-0 mt-4">
+                <div class="card shadow-sm border-0 mt-4 dashboard-activity-card">
                     <div class="card-body p-5">
-                        <h5 class="mb-3">Application activity</h5>
+                        <h5 class="fw-bold mb-3">Application activity</h5>
                         <p class="text-muted mb-3">Review the current status of your submitted applications.</p>
-                        <a href="/applications" class="btn btn-outline-primary">View My Applications</a>
-                        <a href="/saved-jobs" class="btn btn-outline-primary ms-2">View Saved Jobs</a>
+                        <div class="dashboard-activity-actions">
+                            <a href="/applications" class="btn btn-outline-primary">View My Applications</a>
+                            <a href="/saved-jobs" class="btn btn-outline-primary ms-2">View Saved Jobs</a>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4">
-                <div class="card profile-card shadow-sm border-0 h-100">
-                    <div class="card-body p-5">
+            <div class="col-lg-4 dashboard-profile-column">
+                <div class="card profile-card shadow-sm border-0 h-100 dashboard-profile-card">
+                    <div class="card-body p-5 dashboard-profile-body">
                         <div class="d-flex align-items-center mb-4">
                             <div class="me-3">
                                 <div class="avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">

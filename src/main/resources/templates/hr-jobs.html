@@ -1,4 +1,41 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>My Jobs - JobPortal</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous"><link rel="stylesheet" th:href="@{/css/styles.css}"></head>
 <body><nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
-<section class="py-5"><div class="container"><h2 class="fw-bold mb-4">My Jobs</h2><div class="card shadow-sm border-0"><div class="card-body"><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Salary</th><th>Posted</th><th>Status</th><th>Applications</th><th>Actions</th></tr></thead><tbody><tr th:each="job : ${jobs}"><td th:text="${job.title}">Title</td><td th:text="${job.company}">Company</td><td th:text="${job.location}">Location</td><td th:text="${job.salary}">Salary</td><td th:text="${job.postedDate}">Date</td><td th:text="${job.status}">ACTIVE</td><td th:text="${applicationCounts[job.id]}">0</td><td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" th:href="@{'/jobs/' + ${job.id}}">View</a> <a class="btn btn-sm btn-outline-secondary" th:href="@{'/hr/jobs/' + ${job.id} + '/edit'}">Edit</a> <form th:if="${job.status == 'ACTIVE'}" class="d-inline" method="post" th:action="@{'/hr/jobs/' + ${job.id} + '/close'}"><button class="btn btn-sm btn-outline-danger" type="submit">Close</button></form> <a class="btn btn-sm btn-outline-dark" th:href="@{'/hr/jobs/' + ${job.id} + '/applications'}">Applicants</a></td></tr><tr th:if="${#lists.isEmpty(jobs)}"><td colspan="8" class="text-center text-muted py-4">You have not posted any jobs yet.</td></tr></tbody></table></div></div></div></div></section></body></html>
+<section class="py-5 hr-jobs-page">
+    <div class="container hr-jobs-container">
+        <header class="hr-jobs-header mb-4">
+            <span class="hr-dashboard-kicker">HR workspace</span>
+            <h1 class="fw-bold mb-2">My Jobs</h1>
+            <p class="text-muted mb-0">Manage your job postings and review applicant activity.</p>
+        </header>
+        <div class="card shadow-sm border-0 hr-jobs-table-card">
+            <div class="card-body hr-jobs-table-body">
+                <div class="table-responsive hr-jobs-table-wrap">
+                    <table class="table align-middle hr-jobs-table hr-jobs-list-table">
+                        <thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Salary</th><th>Posted</th><th>Status</th><th>Applications</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            <tr th:each="job : ${jobs}">
+                                <td class="hr-job-title" th:text="${job.title}">Title</td>
+                                <td th:text="${job.company}">Company</td>
+                                <td th:text="${job.location}">Location</td>
+                                <td th:text="${job.salary}">Salary</td>
+                                <td th:text="${job.postedDate}">Date</td>
+                                <td><span class="badge hr-job-status" th:classappend="${job.status == 'ACTIVE' ? ' hr-job-active' : ' hr-job-closed'}" th:text="${job.status}">ACTIVE</span></td>
+                                <td th:text="${applicationCounts[job.id]}">0</td>
+                                <td class="text-nowrap hr-job-actions">
+                                    <a class="btn btn-sm btn-outline-primary hr-job-view" th:href="@{'/jobs/' + ${job.id}}">View</a>
+                                    <a class="btn btn-sm btn-outline-secondary hr-job-edit" th:href="@{'/hr/jobs/' + ${job.id} + '/edit'}">Edit</a>
+                                    <form th:if="${job.status == 'ACTIVE'}" class="d-inline hr-job-close-form" method="post" th:action="@{'/hr/jobs/' + ${job.id} + '/close'}"><button class="btn btn-sm btn-outline-danger hr-job-close" type="submit">Close</button></form>
+                                    <a class="btn btn-sm btn-outline-dark hr-job-applicants" th:href="@{'/hr/jobs/' + ${job.id} + '/applications'}">Applicants</a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(jobs)}" class="hr-jobs-empty-row"><td colspan="8" class="text-center text-muted py-4">You have not posted any jobs yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+</body></html>
