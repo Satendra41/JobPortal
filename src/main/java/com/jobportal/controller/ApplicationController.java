@@ -1,5 +1,6 @@
 package com.jobportal.controller;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -12,7 +13,9 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.jobportal.model.Application;
 import com.jobportal.model.Job;
@@ -73,7 +76,6 @@ public class ApplicationController {
         application.setApplicantEmail(user.getEmail());
         var profile = profileService.getOrCreateProfile(user.getId());
         application.setPhone(profile.getPhone());
-        application.setResume(profile.getResumePath());
         application.setStatus("APPLIED");
         application.setAppliedDate(LocalDate.now());
 
@@ -83,7 +85,9 @@ public class ApplicationController {
     }
 
     @PostMapping("/applications/submit")
-    public String submitApplication(@ModelAttribute Application application, HttpSession session, Model model, RedirectAttributes redirectAttributes) {
+    public String submitApplication(@ModelAttribute Application application,
+            @RequestParam(value = "resumeFile", required = false) MultipartFile resumeFile,
+            HttpSession session, Model model, RedirectAttributes redirectAttributes) {
         Object loggedInUser = session.getAttribute("loggedInUser");
         if (!(loggedInUser instanceof User user) || user.getRole() != UserRole.JOB_SEEKER) {
             return "redirect:/login";
@@ -107,20 +111,47 @@ public class ApplicationController {
         }
 
         application.setUserId(user.getId());
+        application.setJobId(job.getId());
         application.setApplicantName(user.getName());
         application.setApplicantEmail(user.getEmail());
         var profile = profileService.getOrCreateProfile(user.getId());
         if (application.getPhone() == null || application.getPhone().isBlank()) {
             application.setPhone(profile.getPhone());
         }
-        if (application.getResume() == null || application.getResume().isBlank()) {
-            application.setResume(profile.getResumePath());
+
+        String applicationResumeFilename;
+        try {
+            applicationResumeFilename = profileService.storeApplicationResume(resumeFile);
+        } catch (IllegalArgumentException ex) {
+            return showApplicationForm(model, job, application, ex.getMessage());
+        } catch (IOException ex) {
+            return showApplicationForm(model, job, application,
+                    "Unable to store the uploaded resume. Please try again.");
         }
+
+        application.setResume(null);
+        application.setApplicationResumeFilename(applicationResumeFilename);
         application.setStatus("APPLIED");
         application.setAppliedDate(LocalDate.now());
 
-        applicationService.saveApplication(application);
+        try {
+            applicationService.saveApplication(application);
+        } catch (RuntimeException ex) {
+            try {
+                profileService.deleteResume(applicationResumeFilename);
+            } catch (IOException cleanupException) {
+                ex.addSuppressed(cleanupException);
+            }
+            throw ex;
+        }
         return "redirect:/applications/success";
+    }
+
+    private String showApplicationForm(Model model, Job job, Application application, String error) {
+        model.addAttribute("job", job);
+        model.addAttribute("application", application);
+        model.addAttribute("error", error);
+        return "apply";
     }
 
     @GetMapping("/applications/success")

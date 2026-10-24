@@ -108,7 +108,7 @@
                         <div class="mt-4 d-flex flex-wrap gap-2 job-action-area">
 
                             <a class="btn btn-primary"
-                               th:if="${job.status != 'CLOSED'}"
+                               th:if="${T(java.lang.Boolean).TRUE.equals(isJobSeeker) and job.status != 'CLOSED'}"
                                th:href="@{'/jobs/' + ${job.id} + '/apply'}">
                                 Apply now
                             </a>

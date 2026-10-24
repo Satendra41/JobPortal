@@ -23,6 +23,7 @@ public class Application {
     private String applicantEmail;
     private String phone;
     private String resume;
+    private String applicationResumeFilename;
 
     @Column(length = 2000)
     private String coverLetter;
@@ -86,6 +87,14 @@ public class Application {
 
     public void setResume(String resume) {
         this.resume = resume;
+    }
+
+    public String getApplicationResumeFilename() {
+        return applicationResumeFilename;
+    }
+
+    public void setApplicationResumeFilename(String applicationResumeFilename) {
+        this.applicationResumeFilename = applicationResumeFilename;
     }
 
     public String getCoverLetter() {

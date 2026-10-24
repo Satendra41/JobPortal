@@ -1,10 +1,13 @@
 package com.jobportal.controller;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -37,17 +40,18 @@ public class ResumeController {
     }
 
     @GetMapping("/profile/resume")
-        public ResponseEntity<InputStreamResource> ownResume(@RequestParam(defaultValue = "false") boolean download,
+    public ResponseEntity<InputStreamResource> ownResume(@RequestParam(defaultValue = "false") boolean download,
             HttpSession session) throws IOException {
         Object loggedInUser = session.getAttribute("loggedInUser");
         if (!(loggedInUser instanceof User user) || user.getRole() != UserRole.JOB_SEEKER) {
             return ResponseEntity.status(302).header(HttpHeaders.LOCATION, "/login").build();
         }
-        return serve(profileService.getOrCreateProfile(user.getId()), "resume.pdf", download);
+        Profile profile = profileService.getOrCreateProfile(user.getId());
+        return serve(profileService.getResumePath(profile), download);
     }
 
     @GetMapping("/hr/applications/{id}/resume")
-        public ResponseEntity<InputStreamResource> applicantResume(@PathVariable Long id,
+    public ResponseEntity<InputStreamResource> applicantResume(@PathVariable Long id,
             @RequestParam(defaultValue = "false") boolean download, HttpSession session) throws IOException {
         Object loggedInUser = session.getAttribute("loggedInUser");
         if (!(loggedInUser instanceof User hr) || hr.getRole() != UserRole.HR) {
@@ -57,19 +61,36 @@ public class ResumeController {
         if (application == null || !jobService.isOwnedBy(jobService.getJobById(application.getJobId()), hr.getId())) {
             return ResponseEntity.status(403).build();
         }
+
+        String applicationResumeFilename = application.getApplicationResumeFilename();
+        if (applicationResumeFilename != null && !applicationResumeFilename.isBlank()) {
+            Path applicationResume = profileService.getResumePath(applicationResumeFilename);
+            return serve(applicationResume, download);
+        }
+
         Profile profile = profileService.getOrCreateProfile(application.getUserId());
-        return serve(profile, "resume.pdf", download);
+        return serve(profileService.getResumePath(profile), download);
     }
 
-    private ResponseEntity<InputStreamResource> serve(Profile profile, String filename, boolean download) throws IOException {
-        Path path = profileService.getResumePath(profile);
-        if (path == null || !Files.isRegularFile(path)) {
+    private ResponseEntity<InputStreamResource> serve(Path path, boolean download) throws IOException {
+        if (path == null || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
             return ResponseEntity.notFound().build();
         }
+
+        String storedFilename = path.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+        boolean docx = storedFilename.endsWith(".docx");
+        String filename = docx ? "resume.docx" : "resume.pdf";
+        MediaType contentType = docx
+                ? MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                : MediaType.APPLICATION_PDF;
+        ContentDisposition disposition = (download ? ContentDisposition.attachment() : ContentDisposition.inline())
+                .filename(filename, StandardCharsets.UTF_8)
+                .build();
+
         return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, (download ? "attachment" : "inline") + "; filename=\"" + filename + "\"")
+                .contentType(contentType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .contentLength(Files.size(path))
-                .body(new InputStreamResource(Files.newInputStream(path)));
+                .body(new InputStreamResource(Files.newInputStream(path, LinkOption.NOFOLLOW_LINKS)));
     }
 }

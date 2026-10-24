@@ -29,11 +29,11 @@
 							<dt class="col-sm-4">Applied date</dt><dd class="col-sm-8" th:text="${jobApplication.appliedDate}">date</dd>
 							<dt class="col-sm-4">Cover letter</dt><dd class="col-sm-8" th:text="${jobApplication.coverLetter}">cover letter</dd>
 						</dl>
-						<div th:if="${applicantProfile.resumePath != null}">
+						<div th:if="${jobApplication.applicationResumeFilename != null or applicantProfile.resumePath != null}">
 							<a class="btn btn-outline-primary" th:href="@{'/hr/applications/' + ${jobApplication.id} + '/resume'}">View Resume</a>
 							<a class="btn btn-outline-secondary ms-2" th:href="@{'/hr/applications/' + ${jobApplication.id} + '/resume?download=true'}">Download Resume</a>
 						</div>
-						<p class="text-muted" th:if="${applicantProfile.resumePath == null}">Resume not available.</p>
+						<p class="text-muted" th:if="${jobApplication.applicationResumeFilename == null and applicantProfile.resumePath == null}">Resume not available.</p>
 					</div>
 				</div>
 			</div>

@@ -23,7 +23,8 @@
                                 <p class="text-muted mb-0">Complete your application and submit it securely.</p>
                             </div>
                         </div>
-                        <form th:action="@{/applications/submit}" th:object="${application}" method="post">
+                        <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
+                        <form th:action="@{/applications/submit}" th:object="${application}" method="post" enctype="multipart/form-data">
                             <input type="hidden" th:field="*{jobId}" />
                             <input type="hidden" th:field="*{userId}" />
                             <div class="mb-3">
@@ -47,8 +48,9 @@
                                 <input type="tel" class="form-control" id="phone" th:field="*{phone}" placeholder="(555) 123-4567" required>
                             </div>
                             <div class="mb-3">
-                                <label for="resume" class="form-label">Resume URL or text</label>
-                                <textarea class="form-control" id="resume" th:field="*{resume}" rows="3" placeholder="Enter a link to your resume or paste your resume text" required></textarea>
+                                <label for="resumeFile" class="form-label">Upload Resume</label>
+                                <input class="form-control" type="file" id="resumeFile" name="resumeFile" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
+                                <div class="form-text">Accepted formats: PDF and DOCX. Maximum size: 5 MB.</div>
                             </div>
                             <div class="mb-3">
                                 <label for="coverLetter" class="form-label">Cover letter</label>

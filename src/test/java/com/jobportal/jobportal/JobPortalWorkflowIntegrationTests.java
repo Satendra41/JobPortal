@@ -15,11 +15,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -175,6 +178,15 @@ class JobPortalWorkflowIntegrationTests {
     @AfterEach
     void cleanUp() throws IOException {
         for (Long applicationId : createdApplicationIds) {
+            applicationRepository.findById(applicationId)
+                    .map(Application::getApplicationResumeFilename)
+                    .ifPresent(filename -> {
+                        try {
+                            profileService.deleteResume(filename);
+                        } catch (IOException ex) {
+                            throw new IllegalStateException("Unable to clean up test application resume.", ex);
+                        }
+                    });
             applicationRepository.deleteById(applicationId);
         }
         for (Long userId : createdUserIds) {
@@ -908,6 +920,103 @@ class JobPortalWorkflowIntegrationTests {
         assertEquals(seeker.getId(), application.getUserId());
         assertEquals(job.getId(), application.getJobId());
         assertEquals("APPLIED", application.getStatus());
+        assertNotNull(application.getApplicationResumeFilename());
+        assertTrue(application.getApplicationResumeFilename().endsWith(".pdf"));
+        assertEquals(null, application.getResume());
+    }
+
+    @Test
+    void seekerCanApplyWithDocxAndHrReceivesPrivateApplicationResume() throws Exception {
+        User hr = createUser("docx-resume-hr", UserRole.HR);
+        User seeker = createUser("docx-resume-seeker", UserRole.JOB_SEEKER);
+        Job job = createJob(hr, "DOCX application job");
+
+        mockMvc.perform(multipart("/applications/submit")
+                        .file(docxFile("candidate.docx", validDocxBytes()))
+                        .session(sessionFor(seeker))
+                        .param("jobId", job.getId().toString())
+                        .param("coverLetter", "A DOCX cover letter."))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/applications/success"));
+
+        Application application = findApplication(seeker, job);
+        createdApplicationIds.add(application.getId());
+        assertTrue(application.getApplicationResumeFilename().endsWith(".docx"));
+        mockMvc.perform(get("/hr/applications/{id}/resume", application.getId()).session(sessionFor(hr)))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertTrue(result.getResponse().getContentType().startsWith(
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document")));
+    }
+
+    @Test
+    void applicationResumeRejectsMissingEmptyInvalidAndOversizedFiles() throws Exception {
+        User hr = createUser("invalid-application-resume-hr", UserRole.HR);
+        User seeker = createUser("invalid-application-resume-seeker", UserRole.JOB_SEEKER);
+        Job job = createJob(hr, "Resume validation job");
+
+        assertApplicationResumeRejected(seeker, job, null, "Please upload a resume file.");
+        assertApplicationResumeRejected(seeker, job,
+                new MockMultipartFile("resumeFile", "empty.pdf", "application/pdf", new byte[0]),
+                "Please upload a resume file.");
+        assertApplicationResumeRejected(seeker, job,
+                new MockMultipartFile("resumeFile", "resume.txt", "text/plain", "text".getBytes(StandardCharsets.UTF_8)),
+                "Resume must have a .pdf or .docx extension.");
+        assertApplicationResumeRejected(seeker, job,
+                new MockMultipartFile("resumeFile", "resume.pdf", "text/plain", "%PDF-1.4\\n%%EOF".getBytes(StandardCharsets.US_ASCII)),
+                "Resume content type must match the selected file format.");
+        assertApplicationResumeRejected(seeker, job,
+                new MockMultipartFile("resumeFile", "resume.pdf", "application/pdf", "not a PDF".getBytes(StandardCharsets.US_ASCII)),
+                "Resume must be a valid PDF file.");
+        assertApplicationResumeRejected(seeker, job,
+                docxFile("fake.docx", "not a zip".getBytes(StandardCharsets.US_ASCII)),
+                "Resume must be a valid DOCX document.");
+        assertApplicationResumeRejected(seeker, job,
+                docxFile("incomplete.docx", zipWithSingleEntry("readme.txt", "not a Word package")),
+                "Resume must be a valid DOCX document.");
+        assertApplicationResumeRejected(seeker, job,
+                new MockMultipartFile("resumeFile", "resume.docx", "application/zip", validDocxBytes()),
+                "Resume content type must match the selected file format.");
+        assertApplicationResumeRejected(seeker, job,
+                new MockMultipartFile("resumeFile", "large.pdf", "application/pdf", new byte[5 * 1024 * 1024 + 1]),
+                "Resume must be 5 MB or smaller.");
+        assertEquals(0, applicationRepository.countByJobId(job.getId()));
+    }
+
+    @Test
+    void duplicateClosedAndNonexistentJobApplicationsAreRejected() throws Exception {
+        User hr = createUser("application-eligibility-hr", UserRole.HR);
+        User seeker = createUser("application-eligibility-seeker", UserRole.JOB_SEEKER);
+        Job job = createJob(hr, "Eligibility application job");
+        submitApplication(seeker, job);
+        Application existing = findApplication(seeker, job);
+        createdApplicationIds.add(existing.getId());
+
+        mockMvc.perform(multipart("/applications/submit")
+                        .file(pdfFile("duplicate.pdf", "%PDF-1.4\\nsecond\\n%%EOF"))
+                        .session(sessionFor(seeker))
+                        .param("jobId", job.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("job-details"))
+                .andExpect(model().attributeExists("alreadyAppliedMessage"));
+        assertEquals(1, applicationRepository.countByJobId(job.getId()));
+
+        Job closed = createJob(hr, "Closed application job");
+        closed.setStatus("CLOSED");
+        jobRepository.save(closed);
+        mockMvc.perform(multipart("/applications/submit")
+                        .file(pdfFile("closed.pdf", "%PDF-1.4\\nclosed\\n%%EOF"))
+                        .session(sessionFor(seeker))
+                        .param("jobId", closed.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/jobs/" + closed.getId()));
+
+        mockMvc.perform(multipart("/applications/submit")
+                        .file(pdfFile("missing-job.pdf", "%PDF-1.4\\nmissing\\n%%EOF"))
+                        .session(sessionFor(seeker))
+                        .param("jobId", "999999999"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/jobs"));
+        assertEquals(0, applicationRepository.countByJobId(closed.getId()));
     }
 
     @Test
@@ -1112,6 +1221,35 @@ class JobPortalWorkflowIntegrationTests {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void olderApplicationWithoutSpecificResumeFallsBackToAuthorizedProfileResume() throws Exception {
+        User hr = createUser("legacy-resume-hr", UserRole.HR);
+        User seeker = createUser("legacy-resume-seeker", UserRole.JOB_SEEKER);
+        uploadResume(seeker);
+        Job job = createJob(hr, "Legacy resume application job");
+        submitApplication(seeker, job);
+        Application application = findApplication(seeker, job);
+        createdApplicationIds.add(application.getId());
+
+        application.setApplicationResumeFilename(null);
+        application.setResume("legacy resume text");
+        applicationRepository.save(application);
+        mockMvc.perform(get("/hr/applications/{id}/resume", application.getId()).session(sessionFor(hr)))
+                .andExpect(status().isOk())
+                .andExpect(contentTypePdf());
+        assertEquals("legacy resume text",
+                applicationRepository.findById(application.getId()).orElseThrow().getResume());
+
+        application.setApplicationResumeFilename("../outside-resume.pdf");
+        applicationRepository.save(application);
+        mockMvc.perform(get("/hr/applications/{id}/resume", application.getId()).session(sessionFor(hr)))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/hr/applications/{id}/resume", application.getId())
+                        .session(sessionFor(createUser("other-legacy-resume-hr", UserRole.HR))))
+                .andExpect(status().isForbidden());
+    }
+
     private User createUser(String label, UserRole role) {
         User user = new User();
         user.setName(testRunId + " " + label);
@@ -1174,14 +1312,29 @@ class JobPortalWorkflowIntegrationTests {
     }
 
     private void submitApplication(User seeker, Job job) throws Exception {
-        mockMvc.perform(post("/applications/submit")
+        mockMvc.perform(multipart("/applications/submit")
+                        .file(pdfFile("application-resume.pdf", "%PDF-1.4\nresume\n%%EOF"))
                         .session(sessionFor(seeker))
                         .param("jobId", job.getId().toString())
                         .param("phone", "555-0100")
-                        .param("resume", "resume text")
                         .param("coverLetter", "A realistic cover letter."))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/applications/success"));
+    }
+
+    private void assertApplicationResumeRejected(User seeker, Job job, MockMultipartFile file, String message)
+            throws Exception {
+        var request = multipart("/applications/submit");
+        request.session(sessionFor(seeker));
+        request.param("jobId", job.getId().toString());
+        request.param("coverLetter", "Validation test");
+        if (file != null) {
+            request.file(file);
+        }
+        mockMvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(view().name("apply"))
+                .andExpect(model().attribute("error", message));
     }
 
     private void uploadResume(User seeker) throws Exception {
@@ -1196,6 +1349,50 @@ class JobPortalWorkflowIntegrationTests {
     private MockMultipartFile pdfFile(String filename, String content) {
         return new MockMultipartFile("resumeFile", filename, "application/pdf",
                 content.getBytes(StandardCharsets.US_ASCII));
+    }
+
+    private MockMultipartFile docxFile(String filename, byte[] content) {
+        return new MockMultipartFile("resumeFile", filename,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document", content);
+    }
+
+    private byte[] validDocxBytes() throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output)) {
+            addZipEntry(zip, "[Content_Types].xml", """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                    </Types>
+                    """);
+            addZipEntry(zip, "_rels/.rels", """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                    </Relationships>
+                    """);
+            addZipEntry(zip, "word/document.xml", """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                      <w:body><w:p><w:r><w:t>Resume</w:t></w:r></w:p></w:body>
+                    </w:document>
+                    """);
+        }
+        return output.toByteArray();
+    }
+
+    private byte[] zipWithSingleEntry(String name, String content) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output)) {
+            addZipEntry(zip, name, content);
+        }
+        return output.toByteArray();
+    }
+
+    private void addZipEntry(ZipOutputStream zip, String name, String content) throws IOException {
+        zip.putNextEntry(new ZipEntry(name));
+        zip.write(content.getBytes(StandardCharsets.UTF_8));
+        zip.closeEntry();
     }
 
     private MockHttpSession sessionFor(User user) {
