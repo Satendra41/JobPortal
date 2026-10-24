@@ -42,11 +42,12 @@
                         </div>
                         <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
                         <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-                        <form method="post" action="/profile" enctype="multipart/form-data" th:object="${profile}" class="profile-edit-form">
+                        <form method="post" th:action="@{/profile}" enctype="multipart/form-data" th:object="${profile}" class="profile-edit-form">
                         <div class="row g-3 profile-form-grid">
                             <div class="col-md-6 profile-field">
                                 <label class="form-label" for="name">Name</label>
-                                <input class="form-control" id="name" name="name" th:value="${user.name}" required>
+                                <input class="form-control" id="name" name="name" th:value="${profileName != null ? profileName : user.name}" maxlength="160" required>
+                                <div class="text-danger small" th:if="${nameError}" th:text="${nameError}"></div>
                             </div>
                             <div class="col-md-6 profile-field">
                                 <label class="form-label" for="email">Email</label>
@@ -55,15 +56,17 @@
                             <div class="col-md-6 profile-field">
                                 <label class="form-label" for="phone">Phone</label>
                                 <input class="form-control" id="phone" th:field="*{phone}" maxlength="30" pattern="[0-9+() .-]{7,30}">
+                                <div class="text-danger small" th:errors="*{phone}"></div>
                             </div>
                             <div class="col-md-6 profile-field">
                                 <label class="form-label" for="location">Location</label>
                                 <input class="form-control" id="location" th:field="*{location}" maxlength="120">
+                                <div class="text-danger small" th:errors="*{location}"></div>
                             </div>
-                            <div class="col-12 profile-field"><label class="form-label" for="headline">Professional headline</label><input class="form-control" id="headline" th:field="*{headline}" maxlength="160"></div>
-                            <div class="col-md-6 profile-field"><label class="form-label" for="skills">Skills</label><textarea class="form-control" id="skills" th:field="*{skills}" rows="3" maxlength="1000"></textarea></div>
-                            <div class="col-md-6 profile-field"><label class="form-label" for="education">Education</label><textarea class="form-control" id="education" th:field="*{education}" rows="3" maxlength="1000"></textarea></div>
-                            <div class="col-12 profile-field"><label class="form-label" for="experience">Experience</label><textarea class="form-control" id="experience" th:field="*{experience}" rows="3" maxlength="2000"></textarea></div>
+                            <div class="col-12 profile-field"><label class="form-label" for="headline">Professional headline</label><input class="form-control" id="headline" th:field="*{headline}" maxlength="160"><div class="text-danger small" th:errors="*{headline}"></div></div>
+                            <div class="col-md-6 profile-field"><label class="form-label" for="skills">Skills</label><textarea class="form-control" id="skills" th:field="*{skills}" rows="3" maxlength="1000"></textarea><div class="text-danger small" th:errors="*{skills}"></div></div>
+                            <div class="col-md-6 profile-field"><label class="form-label" for="education">Education</label><textarea class="form-control" id="education" th:field="*{education}" rows="3" maxlength="1000"></textarea><div class="text-danger small" th:errors="*{education}"></div></div>
+                            <div class="col-12 profile-field"><label class="form-label" for="experience">Experience</label><textarea class="form-control" id="experience" th:field="*{experience}" rows="3" maxlength="2000"></textarea><div class="text-danger small" th:errors="*{experience}"></div></div>
                         </div>
                         <section class="profile-resume-section">
                             <div class="profile-resume-heading">

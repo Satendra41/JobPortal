@@ -45,6 +45,7 @@ public class JobDataInitializer implements ApplicationRunner {
         job.setSalary(salary);
         job.setSkills(skills);
         job.setJobType(jobType);
+        job.setWorkMode("On-site");
         job.setExperience(experience);
         job.setPostedDate(postedDate);
         return job;

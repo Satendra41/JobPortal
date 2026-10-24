@@ -25,6 +25,8 @@ public class User{
     @Enumerated(EnumType.STRING)
     private UserRole role = UserRole.JOB_SEEKER;
 
+    private Boolean enabled = true;
+
     public Long getId() {
         return id;
     }
@@ -63,5 +65,13 @@ public class User{
 
     public void setRole(UserRole role) {
         this.role = role;
+    }
+
+    public boolean isEnabled() {
+        return enabled == null || enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

@@ -6,8 +6,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -85,10 +87,16 @@ public class HrController {
     }
 
     @PostMapping("/hr/jobs")
-    public String createJob(@ModelAttribute Job job, HttpSession session, RedirectAttributes redirectAttributes) {
+    public String createJob(@Valid @ModelAttribute("job") Job job, BindingResult bindingResult,
+            HttpSession session, Model model, RedirectAttributes redirectAttributes) {
         User user = getHrUser(session);
         if (user == null) {
             return redirectForUnauthorized(session);
+        }
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("formTitle", "Post a new job");
+            model.addAttribute("formAction", "/hr/jobs");
+            return "hr-job-form";
         }
         job.setId(null);
         job.setOwnerId(user.getId());
@@ -117,8 +125,8 @@ public class HrController {
     }
 
     @PostMapping("/hr/jobs/{id}/edit")
-    public String updateJob(@PathVariable Long id, @ModelAttribute Job submittedJob, HttpSession session,
-            RedirectAttributes redirectAttributes) {
+    public String updateJob(@PathVariable Long id, @Valid @ModelAttribute("job") Job submittedJob,
+            BindingResult bindingResult, HttpSession session, Model model, RedirectAttributes redirectAttributes) {
         User user = getHrUser(session);
         if (user == null) {
             return redirectForUnauthorized(session);
@@ -127,6 +135,11 @@ public class HrController {
         if (!jobService.isOwnedBy(job, user.getId())) {
             redirectAttributes.addFlashAttribute("error", "You cannot edit this job.");
             return "redirect:/hr/dashboard";
+        }
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("formTitle", "Edit job");
+            model.addAttribute("formAction", "/hr/jobs/" + id + "/edit");
+            return "hr-job-form";
         }
         copyEditableFields(submittedJob, job);
         jobService.saveJob(job);

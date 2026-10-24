@@ -8,6 +8,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "jobs")
@@ -17,18 +20,42 @@ public class Job {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Job title is required.")
+    @Size(max = 180, message = "Job title must be 180 characters or fewer.")
     private String title;
+
+    @NotBlank(message = "Company name is required.")
+    @Size(max = 200, message = "Company name must be 200 characters or fewer.")
     private String company;
+
+    @NotBlank(message = "Location is required.")
+    @Size(max = 160, message = "Location must be 160 characters or fewer.")
     private String location;
+
+    @NotBlank(message = "Job description is required.")
+    @Size(max = 10000, message = "Job description must be 10,000 characters or fewer.")
+    @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Size(max = 120, message = "Salary must be 120 characters or fewer.")
     private String salary;
+
+    @Size(max = 2000, message = "Skills must be 2,000 characters or fewer.")
+    @Column(length = 2000)
     private String skills;
+
+    @NotBlank(message = "Employment type is required.")
+    @Size(max = 80, message = "Employment type must be 80 characters or fewer.")
     private String jobType;
+
+    @NotBlank(message = "Select a work mode.")
+    @Pattern(regexp = "On-site|Hybrid|Remote", message = "Select On-site, Hybrid, or Remote.")
     private String workMode;
 
     @Column(name = "owner_id")
     private Long ownerId;
 
+    @Size(max = 100, message = "Experience must be 100 characters or fewer.")
     private String experience;
 
     @Column(name = "application_deadline")

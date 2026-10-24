@@ -34,6 +34,10 @@
                               th:action="${formAction}"
                               th:object="${job}">
 
+                            <div class="alert alert-danger" th:if="${#fields.hasErrors('*')}">
+                                Please correct the highlighted job details.
+                            </div>
+
                             <div class="row g-3">
 
                                 <!-- Job Title -->
@@ -45,7 +49,9 @@
                                     <input class="form-control"
                                            id="title"
                                            th:field="*{title}"
+                                           maxlength="180"
                                            required>
+                                    <div class="text-danger small" th:errors="*{title}"></div>
                                 </div>
 
                                 <!-- Company -->
@@ -57,7 +63,9 @@
                                     <input class="form-control"
                                            id="company"
                                            th:field="*{company}"
+                                           maxlength="200"
                                            required>
+                                    <div class="text-danger small" th:errors="*{company}"></div>
                                 </div>
 
                                 <!-- Location -->
@@ -69,7 +77,9 @@
                                     <input class="form-control"
                                            id="location"
                                            th:field="*{location}"
+                                           maxlength="160"
                                            required>
+                                    <div class="text-danger small" th:errors="*{location}"></div>
                                 </div>
 
                                 <!-- Employment Type -->
@@ -81,8 +91,10 @@
                                     <input class="form-control"
                                            id="jobType"
                                            th:field="*{jobType}"
+                                           maxlength="80"
                                            placeholder="Full-time, Part-time"
                                            required>
+                                    <div class="text-danger small" th:errors="*{jobType}"></div>
                                 </div>
 
                                 <!-- Work Mode -->
@@ -113,6 +125,7 @@
                                         </option>
 
                                     </select>
+                                    <div class="text-danger small" th:errors="*{workMode}"></div>
                                 </div>
 
                                 <!-- Salary -->
@@ -124,6 +137,7 @@
                                     <input class="form-control"
                                            id="salary"
                                            th:field="*{salary}"
+                                           maxlength="120"
                                            placeholder="₹6 LPA">
                                 </div>
 
@@ -136,6 +150,7 @@
                                     <input class="form-control"
                                            id="experience"
                                            th:field="*{experience}"
+                                           maxlength="100"
                                            placeholder="2-4 years">
                                 </div>
 
@@ -148,6 +163,7 @@
                                     <input class="form-control"
                                            id="skills"
                                            th:field="*{skills}"
+                                           maxlength="2000"
                                            placeholder="Java, Spring Boot, MySQL">
                                 </div>
 
@@ -175,7 +191,9 @@
                                               id="description"
                                               rows="6"
                                               th:field="*{description}"
+                                              maxlength="10000"
                                               required></textarea>
+                                    <div class="text-danger small" th:errors="*{description}"></div>
                                 </div>
 
                             </div>

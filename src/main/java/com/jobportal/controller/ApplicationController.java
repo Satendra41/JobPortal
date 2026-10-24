@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -85,7 +86,7 @@ public class ApplicationController {
     }
 
     @PostMapping("/applications/submit")
-    public String submitApplication(@ModelAttribute Application application,
+    public String submitApplication(@ModelAttribute Application submittedApplication,
             @RequestParam(value = "resumeFile", required = false) MultipartFile resumeFile,
             HttpSession session, Model model, RedirectAttributes redirectAttributes) {
         Object loggedInUser = session.getAttribute("loggedInUser");
@@ -93,7 +94,7 @@ public class ApplicationController {
             return "redirect:/login";
         }
 
-        Job job = jobService.getJobById(application.getJobId());
+        Job job = jobService.getJobById(submittedApplication.getJobId());
         if (job == null) {
             redirectAttributes.addFlashAttribute("error", "Job not found.");
             return "redirect:/jobs";
@@ -110,10 +111,13 @@ public class ApplicationController {
             return "job-details";
         }
 
+        Application application = new Application();
         application.setUserId(user.getId());
         application.setJobId(job.getId());
         application.setApplicantName(user.getName());
         application.setApplicantEmail(user.getEmail());
+        application.setCoverLetter(submittedApplication.getCoverLetter());
+        application.setPhone(submittedApplication.getPhone());
         var profile = profileService.getOrCreateProfile(user.getId());
         if (application.getPhone() == null || application.getPhone().isBlank()) {
             application.setPhone(profile.getPhone());
@@ -136,15 +140,27 @@ public class ApplicationController {
 
         try {
             applicationService.saveApplication(application);
-        } catch (RuntimeException ex) {
-            try {
-                profileService.deleteResume(applicationResumeFilename);
-            } catch (IOException cleanupException) {
-                ex.addSuppressed(cleanupException);
+        } catch (DataIntegrityViolationException ex) {
+            cleanupApplicationResume(applicationResumeFilename, ex);
+            if (applicationService.hasUserApplied(user.getId(), job.getId())) {
+                model.addAttribute("alreadyAppliedMessage", "You have already applied for this job.");
+                addJobDetailsModel(model, user, job);
+                return "job-details";
             }
+            throw ex;
+        } catch (RuntimeException ex) {
+            cleanupApplicationResume(applicationResumeFilename, ex);
             throw ex;
         }
         return "redirect:/applications/success";
+    }
+
+    private void cleanupApplicationResume(String resumeFilename, RuntimeException exception) {
+        try {
+            profileService.deleteResume(resumeFilename);
+        } catch (IOException cleanupException) {
+            exception.addSuppressed(cleanupException);
+        }
     }
 
     private String showApplicationForm(Model model, Job job, Application application, String error) {

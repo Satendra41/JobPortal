@@ -4,6 +4,8 @@ import java.util.Locale;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.jobportal.model.Profile;
 import com.jobportal.model.User;
@@ -20,6 +23,7 @@ import com.jobportal.services.JobService;
 import com.jobportal.services.ProfileService;
 import com.jobportal.services.SavedJobService;
 import com.jobportal.services.UserService;
+import jakarta.validation.Valid;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -169,28 +173,41 @@ public class PageController {
         return "profile";
     }
 
-    @GetMapping("/logout")
+    @PostMapping("/logout")
     public String logout(HttpSession session) {
         session.invalidate();
         return "redirect:/login";
     }
 
     @PostMapping("/profile")
-    public String saveProfile(@RequestParam("name") String name,
-            @ModelAttribute Profile submittedProfile,
-            @RequestParam("resumeFile") MultipartFile resumeFile,
-            HttpSession session, RedirectAttributes redirectAttributes) {
+    public String saveProfile(@RequestParam(value = "name", required = false) String name,
+            @Valid @ModelAttribute("profile") Profile submittedProfile,
+            BindingResult bindingResult,
+            @RequestParam(value = "resumeFile", required = false) MultipartFile resumeFile,
+            HttpSession session, Model model, RedirectAttributes redirectAttributes) {
         User user = getJobSeeker(session);
         if (user == null) {
             return session.getAttribute("loggedInUser") == null ? "redirect:/login" : "redirect:/dashboard";
         }
-        if (name != null && !name.isBlank()) {
-            user.setName(name);
-        } else {
-            redirectAttributes.addFlashAttribute("error", "Name cannot be blank.");
-            return "redirect:/profile";
-        }
         Profile profile = profileService.getOrCreateProfile(user.getId());
+        if (name == null || name.isBlank() || name.length() > 160 || bindingResult.hasErrors()) {
+            profile.setPhone(submittedProfile.getPhone());
+            profile.setLocation(submittedProfile.getLocation());
+            profile.setHeadline(submittedProfile.getHeadline());
+            profile.setSkills(submittedProfile.getSkills());
+            profile.setEducation(submittedProfile.getEducation());
+            profile.setExperience(submittedProfile.getExperience());
+            model.addAttribute("user", user);
+            model.addAttribute("profileName", name);
+            model.addAttribute("error", "Please correct the highlighted profile fields.");
+            if (name == null || name.isBlank()) {
+                model.addAttribute("nameError", "Name is required.");
+            } else if (name.length() > 160) {
+                model.addAttribute("nameError", "Name must be 160 characters or fewer.");
+            }
+            return "profile";
+        }
+        user.setName(name);
         profile.setUserId(user.getId());
         profile.setPhone(submittedProfile.getPhone());
         profile.setLocation(submittedProfile.getLocation());
@@ -209,10 +226,16 @@ public class PageController {
                 profileService.deleteResume(oldResume);
             }
             redirectAttributes.addFlashAttribute("message", "Profile saved successfully.");
-        } catch (IllegalArgumentException | java.io.IOException ex) {
+        } catch (Exception ex) {
             profile.setResumePath(oldResume);
-            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+            redirectAttributes.addFlashAttribute("error", "Unable to save your profile or resume. Please check the form and selected file, then try again.");
         }
+        return "redirect:/profile";
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public String handleProfileUploadTooLarge(RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("error", "Unable to save your profile or resume. Please check the form and selected file, then try again.");
         return "redirect:/profile";
     }
 

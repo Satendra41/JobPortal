@@ -5,6 +5,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "profiles")
@@ -15,11 +17,26 @@ public class Profile {
     private Long id;
 
     private Long userId;
+    @Size(max = 30, message = "Phone number must be 30 characters or fewer.")
+    @Pattern(regexp = "^(?:[0-9+() .-]{7,30})?$", message = "Enter a valid phone number using digits and common phone punctuation.")
     private String phone;
+
+    @Size(max = 120, message = "Location must be 120 characters or fewer.")
     private String location;
+
+    @Size(max = 160, message = "Headline must be 160 characters or fewer.")
     private String headline;
+
+    @Size(max = 1000, message = "Skills must be 1,000 characters or fewer.")
+    @jakarta.persistence.Column(columnDefinition = "TEXT")
     private String skills;
+
+    @Size(max = 1000, message = "Education must be 1,000 characters or fewer.")
+    @jakarta.persistence.Column(columnDefinition = "TEXT")
     private String education;
+
+    @Size(max = 2000, message = "Experience must be 2,000 characters or fewer.")
+    @jakarta.persistence.Column(columnDefinition = "TEXT")
     private String experience;
     private String resumePath;
 

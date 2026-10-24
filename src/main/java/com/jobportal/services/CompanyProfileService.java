@@ -27,29 +27,20 @@ public class CompanyProfileService {
 
     @Transactional
     public CompanyProfile saveProfile(CompanyProfile companyProfile, Long userId) {
-        Optional<CompanyProfile> existingProfile =
-                companyProfileRepository.findByUserId(userId);
+        CompanyProfile profile = companyProfileRepository.findByUserId(userId).orElseGet(CompanyProfile::new);
+        profile.setUserId(userId);
+        profile.setCompanyName(companyProfile.getCompanyName());
+        profile.setDescription(companyProfile.getDescription());
+        profile.setLocation(companyProfile.getLocation());
+        profile.setIndustry(companyProfile.getIndustry());
+        profile.setWebsite(companyProfile.getWebsite());
+        profile.setCompanySize(companyProfile.getCompanySize());
+        profile.setFoundedYear(companyProfile.getFoundedYear());
+        profile.setContactEmail(companyProfile.getContactEmail());
+        profile.setAddress(companyProfile.getAddress());
+        profile.setLogoPath(companyProfile.getLogoPath());
 
-        if (existingProfile.isPresent()) {
-            CompanyProfile existing = existingProfile.get();
-
-            existing.setCompanyName(companyProfile.getCompanyName());
-            existing.setDescription(companyProfile.getDescription());
-            existing.setLocation(companyProfile.getLocation());
-            existing.setIndustry(companyProfile.getIndustry());
-            existing.setWebsite(companyProfile.getWebsite());
-            existing.setCompanySize(companyProfile.getCompanySize());
-            existing.setFoundedYear(companyProfile.getFoundedYear());
-            existing.setContactEmail(companyProfile.getContactEmail());
-            existing.setAddress(companyProfile.getAddress());
-            existing.setLogoPath(companyProfile.getLogoPath());
-
-            return companyProfileRepository.save(existing);
-        }
-
-        companyProfile.setUserId(userId);
-
-        return companyProfileRepository.save(companyProfile);
+        return companyProfileRepository.save(profile);
     }
 
     @Transactional

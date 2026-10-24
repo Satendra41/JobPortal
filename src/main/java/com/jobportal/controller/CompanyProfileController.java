@@ -1,7 +1,9 @@
 package com.jobportal.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,8 +46,10 @@ public class CompanyProfileController {
 
     @PostMapping("/hr/company-profile")
     public String saveCompanyProfile(
-            @ModelAttribute("companyProfile") CompanyProfile submittedProfile,
+            @Valid @ModelAttribute("companyProfile") CompanyProfile submittedProfile,
+            BindingResult bindingResult,
             HttpSession session,
+            Model model,
             RedirectAttributes redirectAttributes) {
 
         User user = getHrUser(session);
@@ -54,14 +58,10 @@ public class CompanyProfileController {
             return unauthorizedRedirect(session);
         }
 
-        if (submittedProfile.getCompanyName() == null
-                || submittedProfile.getCompanyName().isBlank()) {
-
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    "Company name cannot be blank.");
-
-            return "redirect:/hr/company-profile";
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("user", user);
+            model.addAttribute("error", "Please correct the highlighted company profile fields.");
+            return "company-profile";
         }
 
         try {

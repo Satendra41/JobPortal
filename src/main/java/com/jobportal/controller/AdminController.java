@@ -84,9 +84,23 @@ public String adminHome(HttpSession session) {
             return unauthorizedRedirect(session);
         }
         if (userService.updateRoleForAdmin(id, role)) {
-            redirectAttributes.addFlashAttribute("message", "User role updated. The user must log out and log back in.");
+            redirectAttributes.addFlashAttribute("message", "User role updated.");
         } else {
             redirectAttributes.addFlashAttribute("error", "Only Job Seeker and HR roles can be managed.");
+        }
+        return "redirect:/admin/users/" + id;
+    }
+
+    @PostMapping("/admin/users/{id}/status")
+    public String updateUserStatus(@PathVariable Long id, @RequestParam boolean enabled, HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        if (!isAdmin(session)) {
+            return unauthorizedRedirect(session);
+        }
+        if (userService.updateEnabledForAdmin(id, enabled)) {
+            redirectAttributes.addFlashAttribute("message", enabled ? "User account enabled." : "User account disabled.");
+        } else {
+            redirectAttributes.addFlashAttribute("error", "Only Job Seeker and HR accounts can be managed.");
         }
         return "redirect:/admin/users/" + id;
     }

@@ -6,6 +6,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "company_profiles")
@@ -19,29 +25,47 @@ public class CompanyProfile {
     private Long userId;
 
     @Column(name = "company_name", nullable = false)
+    @NotBlank(message = "Company name is required.")
+    @Size(max = 255, message = "Company name must be 255 characters or fewer.")
     private String companyName;
 
     @Column(columnDefinition = "TEXT")
+    @Size(max = 10000, message = "Company description must be 10,000 characters or fewer.")
     private String description;
 
+    @Size(max = 180, message = "Location must be 180 characters or fewer.")
     private String location;
 
+    @Size(max = 120, message = "Industry must be 120 characters or fewer.")
     private String industry;
 
+    @Column(length = 2048)
+    @Size(max = 2048, message = "Website URL must be 2,048 characters or fewer.")
+    @Pattern(regexp = "(?i)^(?:https?://[^\\s/$.?#][^\\s]*)?$",
+            message = "Enter a valid HTTP or HTTPS website URL.")
     private String website;
 
     @Column(name = "company_size")
+    @Pattern(regexp = "^(?:|1-10 employees|11-50 employees|51-200 employees|201-500 employees|501-1000 employees|1000\\+ employees)$",
+            message = "Select a company size from the list.")
     private String companySize;
 
     @Column(name = "founded_year")
+    @Min(value = 1800, message = "Founded year must be 1800 or later.")
+    @Max(value = 2100, message = "Founded year must be 2100 or earlier.")
     private Integer foundedYear;
 
     @Column(name = "contact_email")
+    @Email(message = "Enter a valid contact email address.")
+    @Size(max = 254, message = "Contact email must be 254 characters or fewer.")
     private String contactEmail;
 
+    @Column(columnDefinition = "TEXT")
+    @Size(max = 2000, message = "Address must be 2,000 characters or fewer.")
     private String address;
 
     @Column(name = "logo_path")
+    @Size(max = 255, message = "Logo path must be 255 characters or fewer.")
     private String logoPath;
 
     // Getters and Setters

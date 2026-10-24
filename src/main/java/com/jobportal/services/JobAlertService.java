@@ -19,8 +19,14 @@ public class JobAlertService {
         this.jobAlertRepository = jobAlertRepository;
     }
 
-    public JobAlert createAlert(JobAlert jobAlert, Long userId) {
+    public JobAlert createAlert(JobAlert submittedAlert, Long userId) {
+        JobAlert jobAlert = new JobAlert();
         jobAlert.setUserId(userId);
+        jobAlert.setKeyword(submittedAlert.getKeyword());
+        jobAlert.setLocation(submittedAlert.getLocation());
+        jobAlert.setJobType(submittedAlert.getJobType());
+        jobAlert.setExperience(submittedAlert.getExperience());
+        jobAlert.setMinSalary(submittedAlert.getMinSalary());
         jobAlert.setEnabled(true);
         jobAlert.setCreatedAt(LocalDateTime.now());
         return jobAlertRepository.save(jobAlert);

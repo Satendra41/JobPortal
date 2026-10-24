@@ -8,9 +8,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "applications")
+@Table(name = "applications", uniqueConstraints = @UniqueConstraint(name = "uk_application_user_job", columnNames = {
+        "user_id", "job_id" }))
 public class Application {
 
     @Id

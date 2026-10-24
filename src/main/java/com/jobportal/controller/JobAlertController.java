@@ -44,7 +44,7 @@ public class JobAlertController {
 
     @PostMapping("/job-alerts")
     public String createAlert(
-            @ModelAttribute("newAlert") JobAlert jobAlert,
+            @ModelAttribute("newAlert") JobAlert submittedAlert,
             HttpSession session,
             RedirectAttributes redirectAttributes) {
 
@@ -54,7 +54,7 @@ public class JobAlertController {
             return unauthorizedRedirect(session);
         }
 
-        jobAlertService.createAlert(jobAlert, user.getId());
+        jobAlertService.createAlert(submittedAlert, user.getId());
 
         redirectAttributes.addFlashAttribute(
                 "message",

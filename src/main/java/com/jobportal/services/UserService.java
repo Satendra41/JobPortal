@@ -2,6 +2,7 @@ package com.jobportal.services;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import com.jobportal.repository.UserRepository;
 public class UserService {
 
     private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
+    private static final Pattern BCRYPT_HASH_PATTERN = Pattern.compile("\\$2[aby]\\$\\d{2}\\$[./A-Za-z0-9]{53}");
 
     private final UserRepository userRepository;
 
@@ -34,6 +36,7 @@ public class UserService {
         user.setId(null);
         user.setPassword(PASSWORD_ENCODER.encode(user.getPassword()));
         user.setRole(UserRole.JOB_SEEKER);
+        user.setEnabled(true);
         return userRepository.save(user);
     }
 
@@ -65,8 +68,10 @@ public class UserService {
         if (isEmailTaken(email)) {
             return "Email is already registered";
         }
+        user.setId(null);
         user.setPassword(PASSWORD_ENCODER.encode(user.getPassword()));
         user.setRole(UserRole.JOB_SEEKER);
+        user.setEnabled(true);
         userRepository.save(user);
         return "success";
     }
@@ -94,6 +99,7 @@ public class UserService {
         }
 
         for (User user : userRepository.findAllByEmail(email)) {
+            if (!user.isEnabled()) continue;
             String storedPassword = user.getPassword();
             if (storedPassword == null) continue;
             boolean matched = isPasswordHash(storedPassword)
@@ -117,6 +123,15 @@ public class UserService {
     public User getUserById(@NonNull Long id) {
         Optional<User> userOptional = userRepository.findById(id);
         return userOptional.orElse(null);
+    }
+
+    public User getEnabledUserForSession(@NonNull Long id) {
+        User user = getUserById(id);
+        if (user == null || !user.isEnabled()) {
+            return null;
+        }
+        user.setPassword(null);
+        return user;
     }
 
     public User updateUser(@NonNull Long id, @NonNull User updatedUser) {
@@ -151,6 +166,16 @@ public class UserService {
         return true;
     }
 
+    public boolean updateEnabledForAdmin(@NonNull Long id, boolean enabled) {
+        User user = getUserById(id);
+        if (user == null || user.getRole() == UserRole.ADMIN) {
+            return false;
+        }
+        user.setEnabled(enabled);
+        userRepository.save(user);
+        return true;
+    }
+
     public boolean deleteUser(@NonNull Long id) {
         if (!userRepository.existsById(id)) {
             return false;
@@ -160,6 +185,6 @@ public class UserService {
     }
 
     private boolean isPasswordHash(String password) {
-        return password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$");
+        return BCRYPT_HASH_PATTERN.matcher(password).matches();
     }
 }

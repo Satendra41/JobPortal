@@ -111,8 +111,10 @@
                                        id="companyName"
                                        th:field="*{companyName}"
                                        class="form-control"
+                                       maxlength="255"
                                        placeholder="Example: ABC Technologies"
                                        required>
+                                <div class="text-danger small" th:errors="*{companyName}"></div>
 
                             </div>
 
@@ -131,7 +133,9 @@
                                        id="industry"
                                        th:field="*{industry}"
                                        class="form-control"
+                                       maxlength="120"
                                        placeholder="Example: Information Technology">
+                                <div class="text-danger small" th:errors="*{industry}"></div>
 
                             </div>
 
@@ -150,7 +154,9 @@
                                        id="location"
                                        th:field="*{location}"
                                        class="form-control"
+                                       maxlength="180"
                                        placeholder="Example: Bangalore, India">
+                                <div class="text-danger small" th:errors="*{location}"></div>
 
                             </div>
 
@@ -198,6 +204,7 @@
                                     </option>
 
                                 </select>
+                                <div class="text-danger small" th:errors="*{companySize}"></div>
 
                             </div>
 
@@ -219,6 +226,7 @@
                                        placeholder="Example: 2015"
                                        min="1800"
                                        max="2100">
+                                <div class="text-danger small" th:errors="*{foundedYear}"></div>
 
                             </div>
 
@@ -237,7 +245,9 @@
                                        id="contactEmail"
                                        th:field="*{contactEmail}"
                                        class="form-control"
+                                       maxlength="254"
                                        placeholder="Example: hr@company.com">
+                                <div class="text-danger small" th:errors="*{contactEmail}"></div>
 
                             </div>
 
@@ -256,7 +266,9 @@
                                        id="website"
                                        th:field="*{website}"
                                        class="form-control"
+                                       maxlength="2048"
                                        placeholder="https://www.example.com">
+                                <div class="text-danger small" th:errors="*{website}"></div>
 
                             </div>
 
@@ -275,8 +287,10 @@
                                           th:field="*{address}"
                                           class="form-control"
                                           rows="3"
+                                          maxlength="2000"
                                           placeholder="Enter complete company address">
                                 </textarea>
+                                <div class="text-danger small" th:errors="*{address}"></div>
 
                             </div>
 
@@ -295,8 +309,10 @@
                                           th:field="*{description}"
                                           class="form-control"
                                           rows="5"
+                                          maxlength="10000"
                                           placeholder="Describe your company, products, services and work culture">
                                 </textarea>
+                                <div class="text-danger small" th:errors="*{description}"></div>
 
                             </div>
 
