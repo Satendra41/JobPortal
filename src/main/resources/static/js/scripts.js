@@ -11,4 +11,14 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+    document.querySelectorAll('[data-oauth-login]').forEach(link => {
+        link.addEventListener('click', function () {
+            this.setAttribute('aria-busy', 'true');
+            const label = this.querySelector('span');
+            if (label) {
+                label.textContent = 'Redirecting...';
+            }
+        });
+    });
 });

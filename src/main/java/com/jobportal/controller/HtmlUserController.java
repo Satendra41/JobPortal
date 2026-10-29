@@ -8,6 +8,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.jobportal.model.User;
 import com.jobportal.model.UserRole;
+import com.jobportal.config.OAuthClientRegistrationRepository;
 import com.jobportal.services.UserService;
 
 import jakarta.servlet.http.HttpSession;
@@ -17,9 +18,12 @@ import jakarta.servlet.http.HttpServletRequest;
 public class HtmlUserController {
 
     private final UserService userService;
+    private final OAuthClientRegistrationRepository oauthClientRegistrationRepository;
 
-    public HtmlUserController(UserService userService) {
+    public HtmlUserController(UserService userService,
+            OAuthClientRegistrationRepository oauthClientRegistrationRepository) {
         this.userService = userService;
+        this.oauthClientRegistrationRepository = oauthClientRegistrationRepository;
     }
 
     @PostMapping("/register")
@@ -36,6 +40,7 @@ public class HtmlUserController {
 
         model.addAttribute("error", registrationResult);
         model.addAttribute("user", user);
+        addOAuthAvailability(model);
         return "register";
     }
 
@@ -64,6 +69,12 @@ public class HtmlUserController {
 
         model.addAttribute("error", "Invalid email or password");
         model.addAttribute("user", user);
+        addOAuthAvailability(model);
         return "login";
+    }
+
+    private void addOAuthAvailability(Model model) {
+        model.addAttribute("googleOAuthEnabled", oauthClientRegistrationRepository.isConfigured("google"));
+        model.addAttribute("githubOAuthEnabled", oauthClientRegistrationRepository.isConfigured("github"));
     }
 }

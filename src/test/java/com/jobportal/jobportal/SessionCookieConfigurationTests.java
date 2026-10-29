@@ -31,6 +31,8 @@ class SessionCookieConfigurationTests {
 
         assertTrue("true".equals(properties.getProperty("server.servlet.session.cookie.secure")),
                 "The production profile must require Secure session cookies.");
+        assertTrue("native".equals(properties.getProperty("server.forward-headers-strategy")),
+                "The production profile must honor proxy HTTPS headers for OAuth callback URLs.");
     }
 
     private Properties load(String path) throws IOException {

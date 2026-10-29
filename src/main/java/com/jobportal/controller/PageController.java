@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import com.jobportal.model.Profile;
 import com.jobportal.model.User;
 import com.jobportal.model.UserRole;
+import com.jobportal.config.OAuthClientRegistrationRepository;
 import com.jobportal.services.ApplicationService;
 import com.jobportal.services.JobService;
 import com.jobportal.services.ProfileService;
@@ -38,13 +39,24 @@ public class PageController {
     @GetMapping("/register")
     public String register(Model model) {
         model.addAttribute("user", new com.jobportal.model.User());
+        addOAuthAvailability(model);
         return "register";
     }
 
     @GetMapping("/login")
-    public String login(Model model) {
+    public String login(Model model, @RequestParam(required = false) String error) {
         model.addAttribute("user", new com.jobportal.model.User());
+        addOAuthAvailability(model);
+        if ("social-login".equals(error)) {
+            model.addAttribute("error",
+                    "Social sign-in could not be completed. Use an account with a verified email, or sign in with your original method.");
+        }
         return "login";
+    }
+
+    private void addOAuthAvailability(Model model) {
+        model.addAttribute("googleOAuthEnabled", oauthClientRegistrationRepository.isConfigured("google"));
+        model.addAttribute("githubOAuthEnabled", oauthClientRegistrationRepository.isConfigured("github"));
     }
 
     @GetMapping("/dashboard")
@@ -69,14 +81,17 @@ public class PageController {
     private final UserService userService;
     private final ApplicationService applicationService;
     private final SavedJobService savedJobService;
+    private final OAuthClientRegistrationRepository oauthClientRegistrationRepository;
 
     public PageController(JobService jobService, ProfileService profileService,
-            UserService userService, ApplicationService applicationService, SavedJobService savedJobService) {
+            UserService userService, ApplicationService applicationService, SavedJobService savedJobService,
+            OAuthClientRegistrationRepository oauthClientRegistrationRepository) {
         this.jobService = jobService;
         this.profileService = profileService;
         this.userService = userService;
         this.applicationService = applicationService;
         this.savedJobService = savedJobService;
+        this.oauthClientRegistrationRepository = oauthClientRegistrationRepository;
     }
 
     @GetMapping("/jobs")

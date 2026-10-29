@@ -7,9 +7,11 @@ import java.util.regex.Pattern;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.jobportal.model.User;
 import com.jobportal.model.UserRole;
+import com.jobportal.repository.OAuthAccountRepository;
 import com.jobportal.repository.UserRepository;
 
 @Service
@@ -19,9 +21,11 @@ public class UserService {
     private static final Pattern BCRYPT_HASH_PATTERN = Pattern.compile("\\$2[aby]\\$\\d{2}\\$[./A-Za-z0-9]{53}");
 
     private final UserRepository userRepository;
+    private final OAuthAccountRepository oauthAccountRepository;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, OAuthAccountRepository oauthAccountRepository) {
         this.userRepository = userRepository;
+        this.oauthAccountRepository = oauthAccountRepository;
     }
 
     public @NonNull User registerUser(@NonNull User user) {
@@ -176,10 +180,12 @@ public class UserService {
         return true;
     }
 
+    @Transactional
     public boolean deleteUser(@NonNull Long id) {
         if (!userRepository.existsById(id)) {
             return false;
         }
+        oauthAccountRepository.deleteAllByUser_Id(id);
         userRepository.deleteById(id);
         return true;
     }

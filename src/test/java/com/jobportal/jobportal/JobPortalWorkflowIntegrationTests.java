@@ -68,7 +68,13 @@ import com.jobportal.services.UserService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = "app.upload.dir=target/test-uploads/resumes")
+@TestPropertySource(properties = {
+        "app.upload.dir=target/test-uploads/resumes",
+        "GOOGLE_CLIENT_ID=",
+        "GOOGLE_CLIENT_SECRET=",
+        "GITHUB_CLIENT_ID=",
+        "GITHUB_CLIENT_SECRET="
+})
 class JobPortalWorkflowIntegrationTests {
 
     private static final String TEST_MARKER = "mockmvc-";
@@ -156,7 +162,11 @@ class JobPortalWorkflowIntegrationTests {
 
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
-                .andExpect(contentContains("name=\"_csrf\""));
+                .andExpect(contentContains("name=\"_csrf\""))
+                .andExpect(contentContains("Continue with Google"))
+                .andExpect(contentContains("Continue with GitHub"))
+                .andExpect(contentContains("disabled"))
+                .andExpect(contentContains("Social sign-in is unavailable until provider credentials are configured."));
 
         MockHttpSession logoutSession = sessionFor(hr);
         mockMvc.perform(get("/logout").session(logoutSession))
