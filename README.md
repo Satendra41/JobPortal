@@ -110,7 +110,7 @@ Each provider is enabled only when both of its variables are non-empty. Incomple
 
 ### Run locally and deploy
 
-1. Configure the database variables already required by `application.properties` (`DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`).
+1. For local development, create the `jobportal` database in MySQL and set `DB_USERNAME` and `DB_PASSWORD` for that local server. The local profile defaults to the conventional local MySQL endpoint; set `DB_URL` only when using a different JDBC endpoint. For Render, activate `prod` and set `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` from the Aiven connection settings.
 2. Set either or both OAuth credential pairs in your local environment.
 3. Ensure the provider console callback uses the same host and port as the local application (the default is `http://localhost:8080`).
 4. Start the app with `.\mvnw.cmd spring-boot:run`.

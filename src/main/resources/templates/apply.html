@@ -11,52 +11,66 @@
 <body>
 <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
 
-<section class="py-5">
+<main>
+<section class="py-5 job-application-page">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body p-5">
+            <div class="col-lg-9 col-xl-8">
+                <div class="card job-application-card">
+                    <div class="card-body">
+                        <div class="job-application-heading">
+                            <span class="profile-page-kicker">Job seeker workspace</span>
+                            <h1 class="fw-bold mb-1">Apply for this job</h1>
+                            <p class="text-muted mb-0">Review the role and complete your application.</p>
+                        </div>
+                        <div class="job-application-role">
+                            <div>
+                                <span class="job-application-role-label">Position</span>
+                                <strong th:text="${job.title}">Job title</strong>
+                            </div>
+                            <div>
+                                <span class="job-application-role-label">Company</span>
+                                <span th:text="${job.company}">Company</span>
+                            </div>
+                            <a class="btn btn-sm btn-outline-secondary" th:href="@{'/jobs/' + ${job.id}}">Review job</a>
+                        </div>
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <div>
-                                <h2 class="fw-bold mb-1">Apply for this job</h2>
-                                <p class="text-muted mb-0">Complete your application and submit it securely.</p>
+                                <h2 class="h5 fw-bold mb-1">Your application</h2>
+                                <p class="text-muted mb-0">Your account details are filled in for you.</p>
                             </div>
                         </div>
                         <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
                         <form th:action="@{/applications/submit}" th:object="${application}" method="post" enctype="multipart/form-data">
                             <input type="hidden" th:field="*{jobId}" />
                             <input type="hidden" th:field="*{userId}" />
-                            <div class="mb-3">
-                                <label class="form-label">Job title</label>
-                                <input type="text" class="form-control" th:value="${job.title}" readonly>
+                            <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="applicantName" class="form-label">Applicant name</label>
+                                <input type="text" class="form-control" id="applicantName" th:field="*{applicantName}" readonly>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Company</label>
-                                <input type="text" class="form-control" th:value="${job.company}" readonly>
+                            <div class="col-md-6">
+                                <label for="applicantEmail" class="form-label">Applicant email</label>
+                                <input type="email" class="form-control" id="applicantEmail" th:field="*{applicantEmail}" readonly>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Applicant name</label>
-                                <input type="text" class="form-control" th:field="*{applicantName}" readonly>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Applicant email</label>
-                                <input type="email" class="form-control" th:field="*{applicantEmail}" readonly>
-                            </div>
-                            <div class="mb-3">
+                            <div class="col-12">
                                 <label for="phone" class="form-label">Phone number</label>
                                 <input type="tel" class="form-control" id="phone" th:field="*{phone}" placeholder="(555) 123-4567" required>
                             </div>
-                            <div class="mb-3">
+                            <div class="col-12">
                                 <label for="resumeFile" class="form-label">Upload Resume</label>
                                 <input class="form-control" type="file" id="resumeFile" name="resumeFile" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
                                 <div class="form-text">Accepted formats: PDF and DOCX. Maximum size: 5 MB.</div>
                             </div>
-                            <div class="mb-3">
+                            <div class="col-12">
                                 <label for="coverLetter" class="form-label">Cover letter</label>
                                 <textarea class="form-control" id="coverLetter" th:field="*{coverLetter}" rows="5" placeholder="Tell us why you are a great fit" required></textarea>
                             </div>
-                            <button type="submit" class="btn btn-primary">Submit Application</button>
+                            </div>
+                            <div class="job-application-actions">
+                                <button type="submit" class="btn btn-primary">Submit application</button>
+                                <a class="btn btn-outline-secondary" th:href="@{'/jobs/' + ${job.id}}">Cancel</a>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -64,12 +78,9 @@
         </div>
     </div>
 </section>
+</main>
 
-<footer class="bg-primary text-white py-4">
-    <div class="container text-center">
-        <p class="mb-0">&copy; 2026 JAGAQ. All rights reserved.</p>
-    </div>
-</footer>
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 <script th:src="@{/js/scripts.js}"></script>

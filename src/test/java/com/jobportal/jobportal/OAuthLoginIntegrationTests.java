@@ -74,6 +74,7 @@ class OAuthLoginIntegrationTests {
                     assertTrue(html.contains("/oauth2/authorization/github"));
                     assertTrue(html.contains("OR CONTINUE WITH EMAIL"));
                     assertTrue(html.contains("name=\"_csrf\""));
+                    assertTrue(html.contains("data-password-toggle"));
                 });
 
         mockMvc.perform(get("/register"))
@@ -83,6 +84,7 @@ class OAuthLoginIntegrationTests {
                     assertTrue(html.contains("/oauth2/authorization/google"));
                     assertTrue(html.contains("/oauth2/authorization/github"));
                     assertTrue(html.contains("action=\"/register\""));
+                    assertTrue(html.contains("data-password-toggle"));
                 });
     }
 

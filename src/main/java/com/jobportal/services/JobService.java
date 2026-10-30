@@ -28,6 +28,10 @@ public class JobService {
         return jobRepository.findAll();
     }
 
+    public List<Job> getRecentPublicJobs() {
+        return jobRepository.findTop3ByStatusOrderByPostedDateDesc("ACTIVE");
+    }
+
     /**
      * Returns the jobs that can be shown on the public jobs page. Closed jobs
      * remain available to their HR owner, but are not listed to visitors.

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<footer th:fragment="siteFooter" class="site-footer">
+    <div class="container site-footer-container">
+        <div>
+            <a class="site-footer-brand" th:href="@{/}">JAGAQ</a>
+            <p class="site-footer-copy">Connecting talent with opportunity.</p>
+        </div>
+        <nav class="site-footer-links" aria-label="Footer navigation">
+            <a th:href="@{/jobs}">Jobs</a>
+            <a th:href="@{/about}">About</a>
+            <a th:href="@{/contact}">Contact</a>
+            <a th:if="${session.loggedInUser == null}" th:href="@{/login}">Sign in</a>
+        </nav>
+        <div class="site-footer-bottom">
+            <span>&copy; 2026 JAGAQ. All rights reserved.</span>
+            <a class="site-footer-signin" th:if="${session.loggedInUser == null}" th:href="@{/register}">Create account</a>
+        </div>
+    </div>
+</footer>
+</body>
+</html>

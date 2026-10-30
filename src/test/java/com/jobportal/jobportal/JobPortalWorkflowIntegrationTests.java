@@ -747,6 +747,24 @@ class JobPortalWorkflowIntegrationTests {
     }
 
     @Test
+    void homepageShowsOnlyRealActiveJobs() throws Exception {
+        User hr = createUser("homepage-jobs-hr", UserRole.HR);
+        Job activeJob = createJob(hr, "Homepage active role");
+        Job closedJob = createJob(hr, "Homepage closed role");
+        closedJob.setStatus("CLOSED");
+        jobRepository.save(closedJob);
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("home"))
+                .andExpect(contentContains(activeJob.getTitle()))
+                .andExpect(contentDoesNotContain("home-opportunity-index"))
+                .andExpect(contentDoesNotContain(closedJob.getTitle()))
+                .andExpect(contentDoesNotContain("Product Designer"))
+                .andExpect(contentDoesNotContain("sample jobs"));
+    }
+
+    @Test
     void publicJobSearchReturnsJavaMatches() throws Exception {
         User hr = createUser("java-search-hr", UserRole.HR);
         Job job = createJob(hr, "Java search role");
@@ -819,14 +837,14 @@ class JobPortalWorkflowIntegrationTests {
     void publicJobLocationFilterShowsNoResultsForUnknownLocation() throws Exception {
         mockMvc.perform(get("/jobs").param("location", "doesnotexist123"))
                 .andExpect(status().isOk())
-                .andExpect(contentContains("No jobs found matching your search."));
+                .andExpect(contentContains("No matching jobs"));
     }
 
     @Test
     void publicJobSearchShowsNoResultsMessage() throws Exception {
         mockMvc.perform(get("/jobs").param("keyword", "doesnotexist123"))
                 .andExpect(status().isOk())
-                .andExpect(contentContains("No jobs found matching your search."));
+                .andExpect(contentContains("No matching jobs"));
     }
 
     @Test
@@ -947,7 +965,7 @@ class JobPortalWorkflowIntegrationTests {
     void publicJobExperienceFilterShowsNoResultsForUnknownValue() throws Exception {
         mockMvc.perform(get("/jobs").param("experience", "doesnotexist123"))
                 .andExpect(status().isOk())
-                .andExpect(contentContains("No jobs found matching your search."));
+                .andExpect(contentContains("No matching jobs"));
     }
 
     @Test
@@ -1072,7 +1090,7 @@ class JobPortalWorkflowIntegrationTests {
     void publicJobFiltersShowNoResultsMessageWhenNothingMatches() throws Exception {
         mockMvc.perform(get("/jobs").param("company", "doesnotexist123"))
                 .andExpect(status().isOk())
-                .andExpect(contentContains("No jobs found matching your search."));
+                .andExpect(contentContains("No matching jobs"));
     }
 
     @Test
@@ -1097,7 +1115,7 @@ class JobPortalWorkflowIntegrationTests {
                 .andExpect(contentContains("Unsave"));
         mockMvc.perform(get("/jobs/{id}", job.getId()).session(sessionFor(seeker)))
                 .andExpect(status().isOk())
-                .andExpect(contentContains("Saved — Unsave"));
+                .andExpect(contentContains("Saved - Unsave"));
     }
 
     @Test
@@ -1275,11 +1293,16 @@ class JobPortalWorkflowIntegrationTests {
         Job secondJob = createJob(hr, "Second saved count role");
         saveJob(seeker, firstJob);
         saveJob(seeker, secondJob);
+        submitApplication(seeker, firstJob);
+        Application application = findApplication(seeker, firstJob);
+        createdApplicationIds.add(application.getId());
 
         mockMvc.perform(get("/dashboard").session(sessionFor(seeker)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("dashboard"))
-                .andExpect(model().attribute("savedJobCount", 2L));
+                .andExpect(model().attribute("savedJobCount", 2L))
+                .andExpect(contentContains(firstJob.getTitle()))
+                .andExpect(contentContains("APPLIED"));
     }
 
     @Test
@@ -1505,6 +1528,9 @@ class JobPortalWorkflowIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(view().name("hr-application-details"))
                 .andExpect(contentContains(seeker.getEmail()))
+                .andExpect(contentContains("Candidate profile"))
+                .andExpect(contentContains("Application status"))
+                .andExpect(contentContains("Save status"))
                 .andExpect(contentContains("APPLIED"));
 
         mockMvc.perform(post("/hr/applications/{id}/status", application.getId())
@@ -1563,6 +1589,30 @@ class JobPortalWorkflowIntegrationTests {
                 .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/dashboard"));
         mockMvc.perform(get("/admin/dashboard").session(sessionFor(admin)))
                 .andExpect(status().isOk()).andExpect(view().name("admin-dashboard"));
+    }
+
+    @Test
+    void adminDashboardHandlesJobsAfterTheirOwnerAccountIsDeleted() throws Exception {
+        User admin = createUser("orphan-job-admin", UserRole.ADMIN);
+        User owner = createUser("deleted-job-owner", UserRole.HR);
+        Job job = createJob(owner, "Job with deleted owner");
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/users/{id}", owner.getId())
+                        .session(sessionFor(admin))
+                        .with(csrf()))
+                .andExpect(status().isOk());
+        createdUserIds.remove(owner.getId());
+
+        String dashboard = mockMvc.perform(get("/admin/dashboard").session(sessionFor(admin)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin-dashboard"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        assertTrue(dashboard.contains(job.getTitle()));
+        assertTrue(dashboard.contains("Legacy job"));
     }
 
     @Test

@@ -10,6 +10,7 @@
 <body>
 <th:block th:with="brandText='JAGAQ Admin', brandHref='/admin/dashboard'"><nav th:replace="~{fragments/navigation :: mainNavigation}"></nav></th:block>
 
+<main>
 <section class="py-5 admin-page admin-dashboard-page">
     <div class="container admin-container">
         <header class="admin-page-header">
@@ -31,16 +32,20 @@
         <section class="admin-data-section">
             <header class="admin-section-heading">
                 <h2>Recent users</h2>
+                <a class="btn btn-sm btn-outline-primary" href="/admin/users">View all users</a>
             </header>
             <div class="card border-0 shadow-sm admin-table-card">
                 <div class="table-responsive admin-table-wrap">
                     <table class="table mb-0 admin-table admin-dashboard-users-table">
-                        <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
+                        <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Role</th></tr></thead>
                         <tbody>
                             <tr th:each="user : ${users}">
-                                <td class="admin-primary-cell" th:text="${user.name}">Name</td>
-                                <td th:text="${user.email}">Email</td>
-                                <td><span class="badge bg-secondary admin-role-badge" th:text="${user.role}">ROLE</span></td>
+                                <td class="admin-primary-cell" data-label="Name" th:text="${user.name}">Name</td>
+                                <td data-label="Email" th:text="${user.email}">Email</td>
+                                <td data-label="Role"><span class="badge bg-secondary admin-role-badge" th:text="${user.role}">ROLE</span></td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(users)}" class="admin-empty-row">
+                                <td colspan="3" class="text-center text-muted py-4">No users to display.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -51,17 +56,21 @@
         <section class="admin-data-section">
             <header class="admin-section-heading">
                 <h2>Recent jobs</h2>
+                <a class="btn btn-sm btn-outline-primary" href="/admin/jobs">View all jobs</a>
             </header>
             <div class="card border-0 shadow-sm admin-table-card">
                 <div class="table-responsive admin-table-wrap">
                     <table class="table mb-0 admin-table admin-dashboard-jobs-table">
-                        <thead><tr><th>Title</th><th>Company</th><th>Owner</th><th>Status</th></tr></thead>
+                        <thead><tr><th scope="col">Title</th><th scope="col">Company</th><th scope="col">Owner</th><th scope="col">Status</th></tr></thead>
                         <tbody>
                             <tr th:each="job : ${jobs}">
-                                <td class="admin-primary-cell" th:text="${job.title}">Title</td>
-                                <td th:text="${job.company}">Company</td>
-                                <td th:text="${job.ownerId == null ? 'Legacy job' : userMap[job.ownerId].name}">Owner</td>
-                                <td><span class="badge admin-status-badge" th:text="${job.status}">ACTIVE</span></td>
+                                <td class="admin-primary-cell" data-label="Title" th:text="${job.title}">Title</td>
+                                <td data-label="Company" th:text="${job.company}">Company</td>
+                                <td data-label="Owner" th:text="${job.ownerId == null or userMap[job.ownerId] == null ? 'Legacy job' : userMap[job.ownerId].name}">Owner</td>
+                                <td data-label="Status"><span class="badge admin-status-badge" th:classappend="${job.status == 'ACTIVE' ? 'bg-success' : 'bg-secondary'}" th:text="${job.status}">ACTIVE</span></td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(jobs)}" class="admin-empty-row">
+                                <td colspan="4" class="text-center text-muted py-4">No jobs to display.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -72,17 +81,21 @@
         <section class="admin-data-section">
             <header class="admin-section-heading">
                 <h2>Recent applications</h2>
+                <a class="btn btn-sm btn-outline-primary" href="/admin/applications">View all applications</a>
             </header>
             <div class="card border-0 shadow-sm admin-table-card">
                 <div class="table-responsive admin-table-wrap">
                     <table class="table mb-0 admin-table admin-dashboard-applications-table">
-                        <thead><tr><th>Applicant</th><th>Job</th><th>Applied</th><th>Status</th></tr></thead>
+                        <thead><tr><th scope="col">Applicant</th><th scope="col">Job</th><th scope="col">Applied</th><th scope="col">Status</th></tr></thead>
                         <tbody>
                             <tr th:each="app : ${applications}">
-                                <td class="admin-primary-cell" th:text="${app.applicantName}">Applicant</td>
-                                <td th:text="${jobMap[app.jobId]?.title}">Job</td>
-                                <td th:text="${app.appliedDate}">Date</td>
-                                <td><span class="badge admin-status-badge" th:text="${app.status}">APPLIED</span></td>
+                                <td class="admin-primary-cell" data-label="Applicant" th:text="${app.applicantName}">Applicant</td>
+                                <td data-label="Job" th:text="${jobMap[app.jobId]?.title}">Job</td>
+                                <td data-label="Applied" th:text="${app.appliedDate}">Date</td>
+                                <td data-label="Status"><span class="badge admin-status-badge" th:text="${app.status}">APPLIED</span></td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(applications)}" class="admin-empty-row">
+                                <td colspan="4" class="text-center text-muted py-4">No applications to display.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -91,7 +104,9 @@
         </section>
     </div>
 </section>
+</main>
 
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 </body>
 </html>

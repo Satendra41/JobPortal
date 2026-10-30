@@ -52,3 +52,6 @@ mvnw.cmd.backup
 CON
 .verification/
 apache-maven-3.9.12/
+mysql-2f543a5-satyamsingh261141-111.txt
+/src/main/resources/application-local.properties
+/startup-error.txt

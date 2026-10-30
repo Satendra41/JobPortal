@@ -11,6 +11,7 @@
 <body>
 <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
 
+<main>
 <section class="py-5 job-seeker-dashboard">
     <div class="container dashboard-container">
         <div class="row g-4 dashboard-layout">
@@ -19,7 +20,7 @@
                     <div class="card-body p-5 dashboard-overview-body">
                         <div class="d-flex justify-content-between align-items-center mb-4 dashboard-heading">
                             <div>
-                                <h2 class="fw-bold mb-1">Dashboard</h2>
+                                <h1 class="fw-bold mb-1">Dashboard</h1>
                                 <p class="text-muted mb-0">Your job activity and latest updates.</p>
                                 <h5 th:if="${userName}" class="fw-semibold mt-3">Welcome back, <span th:text="${userName}"></span>!</h5>
                             </div>
@@ -27,7 +28,7 @@
                         </div>
                         <div class="row g-3 dashboard-stats-grid">
                             <div class="col-12 col-sm-6">
-                                <div class="card border-0 shadow-sm py-4 text-center dashboard-stat-card dashboard-stat-applications">
+                                <div class="card border-0 shadow-sm text-center dashboard-stat-card dashboard-stat-applications">
                                     <div class="card-body">
                                         <span class="dashboard-stat-icon"><i class="fas fa-paper-plane" aria-hidden="true"></i></span>
                                         <h3 class="fw-bold" th:text="${applicationCount}">0</h3>
@@ -36,7 +37,7 @@
                                 </div>
                             </div>
                             <div class="col-12 col-sm-6">
-                                <div class="card border-0 shadow-sm py-4 text-center dashboard-stat-card dashboard-stat-selected">
+                                <div class="card border-0 shadow-sm text-center dashboard-stat-card dashboard-stat-selected">
                                     <div class="card-body">
                                         <span class="dashboard-stat-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></span>
                                         <h3 class="fw-bold" th:text="${selectedCount}">0</h3>
@@ -45,7 +46,7 @@
                                 </div>
                             </div>
                             <div class="col-12 col-sm-6">
-                                <div class="card border-0 shadow-sm py-4 text-center dashboard-stat-card dashboard-stat-interviews">
+                                <div class="card border-0 shadow-sm text-center dashboard-stat-card dashboard-stat-interviews">
                                     <div class="card-body">
                                         <span class="dashboard-stat-icon"><i class="fas fa-comments" aria-hidden="true"></i></span>
                                         <h3 class="fw-bold" th:text="${interviewCount}">0</h3>
@@ -54,7 +55,7 @@
                                 </div>
                             </div>
                             <div class="col-12 col-sm-6">
-                                <div class="card border-0 shadow-sm py-4 text-center dashboard-stat-card dashboard-stat-saved">
+                                <div class="card border-0 shadow-sm text-center dashboard-stat-card dashboard-stat-saved">
                                     <div class="card-body">
                                         <span class="dashboard-stat-icon"><i class="fas fa-bookmark" aria-hidden="true"></i></span>
                                         <h3 class="fw-bold" th:text="${savedJobCount}">0</h3>
@@ -65,19 +66,47 @@
                         </div>
                     </div>
                 </div>
-                <div class="card shadow-sm border-0 mt-4 dashboard-activity-card">
+                <section class="card shadow-sm border-0 mt-4 dashboard-activity-card">
                     <div class="card-body p-5">
-                        <h5 class="fw-bold mb-3">Application activity</h5>
-                        <p class="text-muted mb-3">Review the current status of your submitted applications.</p>
+                        <div class="dashboard-activity-heading">
+                            <div>
+                                <h2 class="fw-bold mb-1">Recent applications</h2>
+                                <p class="text-muted mb-0">Your latest application updates.</p>
+                            </div>
+                            <a class="btn btn-outline-primary" href="/applications">View all</a>
+                        </div>
+                        <div class="dashboard-recent-applications" th:if="${!#lists.isEmpty(recentApplications)}">
+                            <article class="dashboard-application-row" th:each="recentApplication : ${recentApplications}">
+                                <div class="dashboard-application-copy">
+                                    <a class="dashboard-application-title"
+                                       th:if="${recentApplicationJobs[recentApplication.jobId] != null}"
+                                       th:href="@{'/jobs/' + ${recentApplication.jobId}}"
+                                       th:text="${recentApplicationJobs[recentApplication.jobId].title}">Job title</a>
+                                    <span class="dashboard-application-title"
+                                          th:unless="${recentApplicationJobs[recentApplication.jobId] != null}">Role no longer available</span>
+                                    <p class="text-muted mb-0">
+                                        <span th:if="${recentApplicationJobs[recentApplication.jobId] != null}"
+                                              th:text="${recentApplicationJobs[recentApplication.jobId].company}">Company</span>
+                                        <span th:text="${recentApplication.appliedDate}">Applied date</span>
+                                    </p>
+                                </div>
+                                <span class="badge application-status-badge"
+                                      th:classappend="${recentApplication.status == 'APPLIED' ? 'bg-primary' : (recentApplication.status == 'SHORTLISTED' ? 'bg-info text-dark' : (recentApplication.status == 'INTERVIEW' ? 'bg-warning text-dark' : (recentApplication.status == 'SELECTED' ? 'bg-success' : 'bg-danger')))}"
+                                      th:text="${recentApplication.status}">APPLIED</span>
+                            </article>
+                        </div>
+                        <div class="dashboard-activity-empty" th:if="${#lists.isEmpty(recentApplications)}" role="status">
+                            <p class="text-muted mb-3">You have not applied to any jobs yet.</p>
+                            <a class="btn btn-outline-primary" href="/jobs">Browse jobs</a>
+                        </div>
                         <div class="dashboard-activity-actions">
-                            <a href="/applications" class="btn btn-outline-primary">View My Applications</a>
-                            <a href="/saved-jobs" class="btn btn-outline-primary ms-2">View Saved Jobs</a>
+                            <a href="/saved-jobs" class="btn btn-outline-secondary">View saved jobs</a>
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
             <div class="col-lg-4 dashboard-profile-column">
-                <div class="card profile-card shadow-sm border-0 h-100 dashboard-profile-card">
+                <div class="card profile-card shadow-sm border-0 dashboard-profile-card">
                     <div class="card-body p-5 dashboard-profile-body">
                         <div class="d-flex align-items-center mb-4">
                             <div class="me-3">
@@ -91,7 +120,7 @@
                             </div>
                         </div>
                         <hr>
-                        <p class="text-muted mb-4">Keep your profile and resume up to date for employers.</p>
+                        <p class="text-muted dashboard-profile-description">Keep your profile and resume up to date for employers.</p>
                         <a href="/profile" class="btn btn-primary w-100">View Profile</a>
                     </div>
                 </div>
@@ -99,12 +128,9 @@
         </div>
     </div>
 </section>
+</main>
 
-<footer class="bg-primary text-white py-4">
-    <div class="container text-center">
-        <p class="mb-0">&copy; 2026 JAGAQ. All rights reserved.</p>
-    </div>
-</footer>
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 <script th:src="@{/js/scripts.js}"></script>

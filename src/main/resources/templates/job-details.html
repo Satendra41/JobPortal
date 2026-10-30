@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Job Details - JAGAQ</title>
+    <title th:text="${job.title + ' | JAGAQ'}">Job details | JAGAQ</title>
+    <meta name="description" th:content="${job.description}">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
           rel="stylesheet"
@@ -21,227 +22,121 @@
 
 <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
 
+<main>
 <section class="py-5 job-details-page">
     <div class="container job-details-container">
+        <a class="job-back-link" th:href="@{/jobs}">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+            <span>All opportunities</span>
+        </a>
 
         <div class="row gy-4 job-details-layout">
-
-            <!-- Main Job Information -->
             <div class="col-lg-8 job-details-main">
+                <article class="card job-primary-card">
+                    <header class="job-details-header">
+                        <span class="job-details-kicker">Opportunity</span>
+                        <h1 class="job-details-title" th:text="${job.title}">Job title</h1>
+                        <p class="job-details-company" th:text="${job.company}">Company</p>
+                        <div class="job-details-overview">
+                            <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span th:text="${job.location}">Location</span></span>
+                            <span class="badge job-badge" th:text="${job.jobType}">Full-time</span>
+                            <span class="badge text-bg-light" th:if="${job.workMode != null and !job.workMode.isBlank()}"
+                                  th:text="${job.workMode}">Work mode</span>
+                        </div>
+                    </header>
 
-                <div class="card shadow-sm border-0 job-primary-card">
-                    <div class="card-body p-5 job-primary-body">
+                    <div class="card-body job-primary-body">
+                        <div th:if="${alreadyAppliedMessage}" class="alert alert-warning" role="status"
+                             th:text="${alreadyAppliedMessage}"></div>
 
-                        <div class="d-flex justify-content-between align-items-start mb-3 job-details-heading">
+                        <section class="job-content-section" th:if="${job.description != null and !job.description.isBlank()}">
+                            <h2>About the role</h2>
+                            <p class="job-description" th:text="${job.description}">Role description</p>
+                        </section>
 
+                        <section class="job-content-section job-skills-section"
+                                 th:if="${job.skills != null and !job.skills.isBlank()}">
+                            <h2>Skills and experience</h2>
+                            <p th:text="${job.skills}">Skills</p>
+                        </section>
+                    </div>
+                </article>
+            </div>
+
+            <aside class="col-lg-4 job-details-sidebar">
+                <div class="card job-facts-card">
+                    <div class="card-body">
+                        <div class="job-facts-heading">
+                            <span>Role overview</span>
+                            <div class="job-facts-salary" th:if="${job.salary != null and !job.salary.isBlank()}">
+                                <span>Compensation</span>
+                                <strong th:text="${job.salary}">Salary</strong>
+                            </div>
+                        </div>
+
+                        <dl class="job-facts-list">
                             <div>
-
-                                <h2 class="fw-bold mb-1 job-details-title"
-                                    th:text="${job.title}">
-                                    Senior Java Developer
-                                </h2>
-
-                                <div th:if="${alreadyAppliedMessage}"
-                                     class="alert alert-warning mt-2"
-                                     th:text="${alreadyAppliedMessage}">
-                                </div>
-
-                                <p class="text-muted mb-0 job-details-meta">
-                                    <span th:text="${job.company}">
-                                        Acme Corp
-                                    </span>
-                                    •
-                                    <span th:text="${job.location}">
-                                        Remote
-                                    </span>
-                                    •
-                                    <span th:text="${job.jobType}">
-                                        Full-time
-                                    </span>
-                                </p>
-
+                                <dt>Location</dt>
+                                <dd th:text="${job.location}">Location</dd>
                             </div>
-
-                            <span class="badge job-badge"
-                                  th:text="${job.jobType}">
-                                Engineering
-                            </span>
-
-                        </div>
-
-                        <hr class="job-details-divider">
-
-                        <!-- Job Description -->
-                        <h5 class="job-section-title">Job description</h5>
-
-                        <p class="text-muted job-description"
-                           th:text="${job.description}">
-                            Drive backend engineering efforts with Spring Boot
-                            and microservices. Collaborate with product and
-                            design teams to build scalable APIs and integrations.
-                        </p>
-
-                        <!-- Skills and Salary -->
-                        <div class="row gy-3 job-highlights">
-
-                            <div class="col-md-6 job-highlight-item">
-                                <h6 class="job-section-title">Skills</h6>
-
-                                <p class="text-muted"
-                                   th:text="${job.skills}">
-                                    Java, Spring Boot, MySQL
-                                </p>
+                            <div th:if="${job.workMode != null and !job.workMode.isBlank()}">
+                                <dt>Work mode</dt>
+                                <dd th:text="${job.workMode}">Work mode</dd>
                             </div>
-
-                            <div class="col-md-6 job-highlight-item">
-                                <h6 class="job-section-title">Salary</h6>
-
-                                <p class="text-muted"
-                                   th:text="${job.salary}">
-                                    ₹6 LPA
-                                </p>
+                            <div>
+                                <dt>Employment type</dt>
+                                <dd th:text="${job.jobType}">Job type</dd>
                             </div>
+                            <div th:if="${job.experience != null and !job.experience.isBlank()}">
+                                <dt>Experience</dt>
+                                <dd th:text="${job.experience}">Experience</dd>
+                            </div>
+                            <div th:if="${job.applicationDeadline != null}">
+                                <dt>Apply before</dt>
+                                <dd th:text="${job.applicationDeadline}">Application deadline</dd>
+                            </div>
+                            <div th:if="${job.postedDate != null}">
+                                <dt>Posted</dt>
+                                <dd th:text="${job.postedDate}">Posted date</dd>
+                            </div>
+                        </dl>
 
-                        </div>
-
-                        <!-- Buttons -->
-                        <div class="mt-4 d-flex flex-wrap gap-2 job-action-area">
-
-                            <a class="btn btn-primary"
+                        <div class="job-action-area">
+                            <a class="btn btn-primary w-100"
                                th:if="${T(java.lang.Boolean).TRUE.equals(isJobSeeker) and job.status != 'CLOSED'}"
-                               th:href="@{'/jobs/' + ${job.id} + '/apply'}">
-                                Apply now
-                            </a>
+                               th:href="@{'/jobs/' + ${job.id} + '/apply'}">Apply now</a>
 
-                            <span class="btn btn-secondary disabled"
-                                  th:if="${job.status == 'CLOSED'}">
-                                Applications closed
-                            </span>
+                            <span class="btn btn-secondary disabled w-100" th:if="${job.status == 'CLOSED'}"
+                                  aria-disabled="true">Applications closed</span>
 
-                            <form
-                                th:if="${T(java.lang.Boolean).TRUE.equals(isJobSeeker) and !T(java.lang.Boolean).TRUE.equals(isJobSaved)}"
-                                method="post"
-                                th:action="@{'/jobs/' + ${job.id} + '/save'}">
-
-                                <button class="btn btn-outline-primary"
-                                        type="submit">
-                                    <i class="far fa-bookmark me-1"></i>
-                                    Save Job
+                            <form th:if="${T(java.lang.Boolean).TRUE.equals(isJobSeeker) and !T(java.lang.Boolean).TRUE.equals(isJobSaved)}"
+                                  method="post" th:action="@{'/jobs/' + ${job.id} + '/save'}">
+                                <button class="btn btn-outline-primary w-100" type="submit">
+                                    <i class="far fa-bookmark me-1" aria-hidden="true"></i>Save Job
                                 </button>
-
                             </form>
 
-                            <form
-                                th:if="${T(java.lang.Boolean).TRUE.equals(isJobSeeker) and T(java.lang.Boolean).TRUE.equals(isJobSaved)}"
-                                method="post"
-                                th:action="@{'/jobs/' + ${job.id} + '/unsave'}">
-
-                                <button class="btn btn-outline-secondary"
-                                        type="submit">
-                                    <i class="fas fa-bookmark me-1"></i>
-                                    Saved — Unsave
+                            <form th:if="${T(java.lang.Boolean).TRUE.equals(isJobSeeker) and T(java.lang.Boolean).TRUE.equals(isJobSaved)}"
+                                  method="post" th:action="@{'/jobs/' + ${job.id} + '/unsave'}">
+                                <button class="btn btn-outline-secondary w-100" type="submit">
+                                    <i class="fas fa-bookmark me-1" aria-hidden="true"></i>Saved - Unsave
                                 </button>
-
                             </form>
-
-                            <a class="btn btn-outline-primary"
-                               href="/jobs">
-                                Back to jobs
-                            </a>
-
                         </div>
 
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Job Details -->
-            <div class="col-lg-4 job-details-sidebar">
-
-                <div class="card shadow-sm border-0 job-facts-card">
-
-                    <div class="card-body p-4">
-
-                        <h5 class="fw-bold mb-3 job-facts-title">
-                            Job details
-                        </h5>
-
-                        <ul class="list-unstyled text-muted job-facts-list">
-
-                            <li class="mb-2">
-                                <strong>Location:</strong>
-                                <span th:text="${job.location}">
-                                    Remote
-                                </span>
-                            </li>
-
-                            <!-- NEW: Work Mode -->
-                            <li class="mb-2">
-                                <strong>Work mode:</strong>
-                                <span th:text="${job.workMode}">
-                                    Remote
-                                </span>
-                            </li>
-
-                            <li class="mb-2">
-                                <strong>Salary:</strong>
-                                <span th:text="${job.salary}">
-                                    $90k - $120k
-                                </span>
-                            </li>
-
-                            <li class="mb-2">
-                                <strong>Experience:</strong>
-                                <span th:text="${job.experience}">
-                                    Mid-Senior
-                                </span>
-                            </li>
-
-                            <li class="mb-2">
-                                <strong>Apply before:</strong>
-                                <span th:text="${job.applicationDeadline != null ? job.applicationDeadline : '-'}">
-                                    30 June 2026
-                                </span>
-                            </li>
-
-                        </ul>
-
-                        <div class="border-top pt-3 job-support-area">
-
-                            <p class="mb-2 text-muted">
-                                Need help?
-                            </p>
-
-                            <a href="/contact"
-                               class="btn btn-outline-primary w-100">
-                                Contact support
-                            </a>
-
+                        <div class="job-support-area">
+                            <p>Have a question about this opportunity?</p>
+                            <a th:href="@{/contact}">Contact support <span aria-hidden="true">&rarr;</span></a>
                         </div>
-
                     </div>
-
                 </div>
-
-            </div>
-
+            </aside>
         </div>
-
     </div>
 </section>
+</main>
 
-<footer class="bg-primary text-white py-4">
-
-    <div class="container text-center">
-
-        <p class="mb-0">
-            &copy; 2026 JAGAQ. All rights reserved.
-        </p>
-
-    </div>
-
-</footer>
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
         crossorigin="anonymous">

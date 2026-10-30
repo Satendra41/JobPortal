@@ -1,6 +1,8 @@
 package com.jobportal.controller;
 
 import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -16,6 +18,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.jobportal.model.Profile;
+import com.jobportal.model.Application;
+import com.jobportal.model.Job;
 import com.jobportal.model.User;
 import com.jobportal.model.UserRole;
 import com.jobportal.config.OAuthClientRegistrationRepository;
@@ -32,7 +36,8 @@ import jakarta.servlet.http.HttpSession;
 public class PageController {
 
     @GetMapping("/")
-    public String home() {
+    public String home(Model model) {
+        model.addAttribute("featuredJobs", jobService.getRecentPublicJobs());
         return "home";
     }
 
@@ -73,6 +78,16 @@ public class PageController {
         model.addAttribute("selectedCount", applications.stream()
                 .filter(application -> "SELECTED".equals(application.getStatus())).count());
         model.addAttribute("savedJobCount", savedJobService.countForUser(user.getId()));
+        var recentApplications = applications.stream().limit(5).toList();
+        Map<Long, Job> recentApplicationJobs = new HashMap<>();
+        for (Application application : recentApplications) {
+            Job job = jobService.getJobById(application.getJobId());
+            if (job != null) {
+                recentApplicationJobs.put(job.getId(), job);
+            }
+        }
+        model.addAttribute("recentApplications", recentApplications);
+        model.addAttribute("recentApplicationJobs", recentApplicationJobs);
         return "dashboard";
     }
 

@@ -1,60 +1,101 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Applicant Details - JAGAQ</title>
-	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
-	<link rel="stylesheet" th:href="@{/css/styles.css}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${jobApplication.applicantName + ' | Applicant | JAGAQ'}">Applicant | JAGAQ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
 </head>
 <body>
-<th:block th:with="contextHref=@{'/hr/jobs/' + ${job.id} + '/applications'}, contextLabel='Back to applicants'"><nav th:replace="~{fragments/navigation :: mainNavigation}"></nav></th:block>
-<section class="py-5">
-	<div class="container">
-		<div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
-		<h2 class="fw-bold mb-1" th:text="${jobApplication.applicantName}">Applicant</h2>
-		<p class="text-muted mb-4" th:text="${job.title + ' - ' + job.company}">Job</p>
-		<div class="row g-4">
-			<div class="col-lg-7">
-				<div class="card shadow-sm border-0">
-					<div class="card-body p-4">
-						<h5 class="fw-bold">Applicant Profile</h5>
-						<dl class="row mt-3">
-							<dt class="col-sm-4">Email</dt><dd class="col-sm-8" th:text="${jobApplication.applicantEmail}">email</dd>
-							<dt class="col-sm-4">Phone</dt><dd class="col-sm-8" th:text="${applicantProfile.phone != null ? applicantProfile.phone : jobApplication.phone}">phone</dd>
-							<dt class="col-sm-4">Location</dt><dd class="col-sm-8" th:text="${applicantProfile.location != null ? applicantProfile.location : '-'}">-</dd>
-							<dt class="col-sm-4">Skills</dt><dd class="col-sm-8" th:text="${applicantProfile.skills != null ? applicantProfile.skills : '-'}">-</dd>
-							<dt class="col-sm-4">Education</dt><dd class="col-sm-8" th:text="${applicantProfile.education != null ? applicantProfile.education : '-'}">-</dd>
-							<dt class="col-sm-4">Experience</dt><dd class="col-sm-8" th:text="${applicantProfile.experience != null ? applicantProfile.experience : '-'}">-</dd>
-							<dt class="col-sm-4">Applied date</dt><dd class="col-sm-8" th:text="${jobApplication.appliedDate}">date</dd>
-							<dt class="col-sm-4">Cover letter</dt><dd class="col-sm-8" th:text="${jobApplication.coverLetter}">cover letter</dd>
-						</dl>
-						<div th:if="${jobApplication.applicationResumeFilename != null or applicantProfile.resumePath != null}">
-							<a class="btn btn-outline-primary" th:href="@{'/hr/applications/' + ${jobApplication.id} + '/resume'}">View Resume</a>
-							<a class="btn btn-outline-secondary ms-2" th:href="@{'/hr/applications/' + ${jobApplication.id} + '/resume?download=true'}">Download Resume</a>
-						</div>
-						<p class="text-muted" th:if="${jobApplication.applicationResumeFilename == null and applicantProfile.resumePath == null}">Resume not available.</p>
-					</div>
-				</div>
-			</div>
-			<div class="col-lg-5">
-				<div class="card shadow-sm border-0">
-					<div class="card-body p-4">
-						<h5 class="fw-bold">Application status</h5>
-						<p class="text-muted">Current: <strong th:text="${jobApplication.status}">APPLIED</strong></p>
-						<form method="post" th:action="@{'/hr/applications/' + ${jobApplication.id} + '/status'}">
-							<label class="form-label" for="status">Change status</label>
-							<select class="form-select mb-3" id="status" name="status">
-								<option th:each="status : ${statuses}" th:value="${status}" th:text="${status}" th:selected="${status == jobApplication.status}">APPLIED</option>
-							</select>
-							<button class="btn btn-primary" type="submit">Update status</button>
-						</form>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-</section>
+<th:block th:with="contextHref=@{'/hr/jobs/' + ${job.id} + '/applications'}, contextLabel='Back to applicants'">
+    <nav th:replace="~{fragments/navigation :: mainNavigation}"></nav>
+</th:block>
+
+<main>
+    <section class="py-5 hr-applicant-detail-page">
+        <div class="container hr-applicant-detail-container">
+            <div th:if="${message}" class="alert alert-success" role="status" th:text="${message}"></div>
+            <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
+
+            <header class="hr-applicant-detail-header">
+                <div>
+                    <span class="hr-dashboard-kicker">Applicant review</span>
+                    <h1 class="fw-bold" th:text="${jobApplication.applicantName}">Applicant</h1>
+                    <p class="text-muted mb-0">
+                        Applied for <span th:text="${job.title}">Job</span>
+                        at <span th:text="${job.company}">Company</span>
+                    </p>
+                </div>
+                <span class="badge application-status-badge"
+                      th:classappend="${jobApplication.status == 'APPLIED' ? 'bg-primary' : (jobApplication.status == 'SHORTLISTED' ? 'bg-info text-dark' : (jobApplication.status == 'INTERVIEW' ? 'bg-warning text-dark' : (jobApplication.status == 'SELECTED' ? 'bg-success' : 'bg-danger')))}"
+                      th:text="${jobApplication.status}">APPLIED</span>
+            </header>
+
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <section class="card hr-applicant-profile-card">
+                        <div class="card-body">
+                            <h2>Candidate profile</h2>
+                            <dl class="hr-applicant-profile-list">
+                                <dt>Email</dt>
+                                <dd th:text="${jobApplication.applicantEmail}">email</dd>
+                                <dt>Phone</dt>
+                                <dd th:text="${applicantProfile.phone != null ? applicantProfile.phone : jobApplication.phone}">phone</dd>
+                                <dt>Location</dt>
+                                <dd th:text="${applicantProfile.location != null ? applicantProfile.location : '-'}">-</dd>
+                                <dt>Skills</dt>
+                                <dd th:text="${applicantProfile.skills != null ? applicantProfile.skills : '-'}">-</dd>
+                                <dt>Education</dt>
+                                <dd th:text="${applicantProfile.education != null ? applicantProfile.education : '-'}">-</dd>
+                                <dt>Experience</dt>
+                                <dd th:text="${applicantProfile.experience != null ? applicantProfile.experience : '-'}">-</dd>
+                                <dt>Applied date</dt>
+                                <dd th:text="${jobApplication.appliedDate}">Date</dd>
+                            </dl>
+
+                            <div class="hr-applicant-cover-letter">
+                                <h3>Cover letter</h3>
+                                <p class="mb-0" th:if="${jobApplication.coverLetter != null and !jobApplication.coverLetter.isBlank()}"
+                                   th:text="${jobApplication.coverLetter}">Cover letter</p>
+                                <p class="text-muted mb-0" th:if="${jobApplication.coverLetter == null or jobApplication.coverLetter.isBlank()}">
+                                    No cover letter provided.
+                                </p>
+                            </div>
+
+                            <div class="hr-applicant-resume" th:if="${jobApplication.applicationResumeFilename != null or applicantProfile.resumePath != null}">
+                                <a class="btn btn-outline-primary" th:href="@{'/hr/applications/' + ${jobApplication.id} + '/resume'}">View resume</a>
+                                <a class="btn btn-outline-secondary" th:href="@{'/hr/applications/' + ${jobApplication.id} + '/resume?download=true'}">Download resume</a>
+                            </div>
+                            <p class="text-muted mb-0" th:if="${jobApplication.applicationResumeFilename == null and applicantProfile.resumePath == null}">
+                                Resume not available.
+                            </p>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="col-lg-5">
+                    <section class="card hr-applicant-status-card">
+                        <div class="card-body">
+                            <h2>Application status</h2>
+                            <p class="text-muted">Select the current stage for this candidate.</p>
+                            <form method="post" th:action="@{'/hr/applications/' + ${jobApplication.id} + '/status'}">
+                                <label class="form-label" for="status">Status</label>
+                                <select class="form-select mb-3" id="status" name="status">
+                                    <option th:each="status : ${statuses}" th:value="${status}" th:text="${status}"
+                                            th:selected="${status == jobApplication.status}">APPLIED</option>
+                                </select>
+                                <button class="btn btn-primary w-100" type="submit">Save status</button>
+                            </form>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer th:replace="~{fragments/footer :: siteFooter}"></footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 </body>
 </html>

@@ -33,6 +33,7 @@
 
 
     <!-- Main Content -->
+    <main>
     <section class="py-5 job-alerts-page">
 
         <div class="container job-alerts-container">
@@ -40,12 +41,14 @@
             <!-- Page Heading -->
             <div class="mb-4 job-alerts-header">
 
-                <h2 class="fw-bold mb-1 job-alerts-title">
+                <span class="job-alerts-kicker">Stay in the loop</span>
+
+                <h1 class="fw-bold mb-1 job-alerts-title">
                     Job Alerts
-                </h2>
+                </h1>
 
                 <p class="text-muted mb-0">
-                    Create alerts to keep track of jobs that match your interests.
+                    Save the role criteria you care about, then enable, disable, or remove alerts as your search changes.
                 </p>
 
             </div>
@@ -91,8 +94,8 @@
                         <div class="me-3">
 
                             <div
-                                class="avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-                                style="width: 50px; height: 50px;">
+                                class="avatar job-alert-create-icon rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                                aria-hidden="true">
 
                                 <i class="fas fa-bell fa-lg"></i>
 
@@ -102,9 +105,9 @@
 
                         <div>
 
-                            <h5 class="fw-bold mb-0">
+                            <h2 class="fw-bold mb-0">
                                 Create a Job Alert
-                            </h5>
+                            </h2>
 
                             <p class="text-muted mb-0">
                                 Get notified when jobs match your preferences.
@@ -282,9 +285,9 @@
 
                         <div>
 
-                            <h5 class="fw-bold mb-1">
+                            <h2 class="fw-bold mb-1">
                                 Your Job Alerts
-                            </h5>
+                            </h2>
 
                             <p class="text-muted mb-0">
                                 Manage your saved job alert preferences.
@@ -292,24 +295,24 @@
 
                         </div>
 
-                        <span class="badge bg-primary">
-                            <span th:text="${#lists.size(alerts)}">0</span>
-                            Alerts
+                        <span class="badge job-alert-count">
+                            <span class="job-alert-count-value" th:text="${#lists.size(alerts)}">0</span>
+                            <span class="job-alert-count-label">Alerts</span>
                         </span>
 
                     </div>
 
 
                     <!-- No Alerts -->
-                    <div class="job-alerts-empty-state" th:if="${#lists.isEmpty(alerts)}">
+                    <div class="job-alerts-empty-state" th:if="${#lists.isEmpty(alerts)}" role="status">
 
                         <div class="text-center py-5 job-alerts-empty-content">
 
                             <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
 
-                            <h6 class="fw-bold">
+                            <h2 class="h5 fw-bold">
                                 No Job Alerts Yet
-                            </h6>
+                            </h2>
 
                             <p class="text-muted mb-0">
                                 You haven't created any job alerts yet.
@@ -335,7 +338,7 @@
 
                                     <div>
 
-                                        <h5 class="fw-bold mb-1 job-alert-item-title">
+                                        <h3 class="fw-bold mb-1 job-alert-item-title">
 
                                             <i class="fas fa-bell text-primary me-2"></i>
 
@@ -348,7 +351,7 @@
 
                                             </span>
 
-                                        </h5>
+                                        </h3>
 
                                     </div>
 
@@ -371,7 +374,26 @@
 
 
                                 <!-- Alert Details -->
+                                <p class="job-alert-criteria-label"
+                                   th:if="${(alert.keyword != null and !alert.keyword.isBlank()) or (alert.location != null and !alert.location.isBlank()) or (alert.jobType != null and !alert.jobType.isBlank()) or (alert.experience != null and !alert.experience.isBlank()) or (alert.minSalary != null and !alert.minSalary.isBlank())}">Matching criteria</p>
                                 <div class="row g-2 job-alert-details">
+
+                                    <!-- Keyword -->
+                                    <div
+                                        class="col-md-6 job-alert-detail"
+                                        th:if="${alert.keyword != null and !alert.keyword.isBlank()}">
+
+                                        <p class="text-muted mb-2 job-alert-detail-text">
+
+                                            <i class="fas fa-magnifying-glass me-2"></i>
+
+                                            <strong>Keyword:</strong>
+
+                                            <span th:text="${alert.keyword}">Keyword</span>
+
+                                        </p>
+
+                                    </div>
 
                                     <!-- Location -->
                                     <div
@@ -440,7 +462,7 @@
 
                                         <p class="text-muted mb-2 job-alert-detail-text">
 
-                                            <i class="fas fa-indian-rupee-sign me-2"></i>
+                                            <i class="fas fa-money-bill-wave me-2"></i>
 
                                             <strong>Minimum Salary:</strong>
 
@@ -547,20 +569,11 @@
         </div>
 
     </section>
+    </main>
 
 
     <!-- Footer -->
-    <footer class="bg-primary text-white py-4">
-
-        <div class="container text-center">
-
-            <p class="mb-0">
-                &copy; 2026 JAGAQ. All rights reserved.
-            </p>
-
-        </div>
-
-    </footer>
+    <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
 
 
     <!-- Bootstrap JavaScript -->
