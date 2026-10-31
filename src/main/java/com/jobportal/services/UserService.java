@@ -28,22 +28,6 @@ public class UserService {
         this.oauthAccountRepository = oauthAccountRepository;
     }
 
-    public @NonNull User registerUser(@NonNull User user) {
-        if (user.getName() == null || user.getName().isBlank()
-                || user.getEmail() == null || user.getEmail().isBlank()
-                || user.getPassword() == null || user.getPassword().isBlank()) {
-            throw new IllegalArgumentException("Name, email, and password are required.");
-        }
-        if (isEmailTaken(user.getEmail())) {
-            throw new IllegalArgumentException("Email is already registered.");
-        }
-        user.setId(null);
-        user.setPassword(PASSWORD_ENCODER.encode(user.getPassword()));
-        user.setRole(UserRole.JOB_SEEKER);
-        user.setEnabled(true);
-        return userRepository.save(user);
-    }
-
     public @NonNull User save(@NonNull User user) {
         if (user.getId() != null) {
             User stored = userRepository.findById(user.getId()).orElse(null);
@@ -58,30 +42,8 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public String registerNewUser(@NonNull User user) {
-        if (user.getName() == null || user.getName().isBlank()) {
-            return "Name is required";
-        }
-        final String email = user.getEmail();
-        if (email == null || email.isBlank()) {
-            return "Email is required";
-        }
-        if (user.getPassword() == null || user.getPassword().isBlank()) {
-            return "Password is required";
-        }
-        if (isEmailTaken(email)) {
-            return "Email is already registered";
-        }
-        user.setId(null);
-        user.setPassword(PASSWORD_ENCODER.encode(user.getPassword()));
-        user.setRole(UserRole.JOB_SEEKER);
-        user.setEnabled(true);
-        userRepository.save(user);
-        return "success";
-    }
-
     public boolean isEmailTaken(@NonNull String email) {
-        return !userRepository.findAllByEmail(email).isEmpty();
+        return !userRepository.findAllByEmailIgnoreCase(email.trim()).isEmpty();
     }
 
     public String loginUser(String email, String password) {
@@ -103,7 +65,7 @@ public class UserService {
         }
 
         for (User user : userRepository.findAllByEmail(email)) {
-            if (!user.isEnabled()) continue;
+            if (!user.isEnabled() || !user.isEmailVerified()) continue;
             String storedPassword = user.getPassword();
             if (storedPassword == null) continue;
             boolean matched = isPasswordHash(storedPassword)

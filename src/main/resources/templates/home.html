@@ -25,7 +25,7 @@
                 <div class="d-flex gap-3 flex-wrap home-hero-actions">
                     <a class="btn btn-primary btn-lg" href="/jobs">Explore open roles</a>
                     <a class="btn btn-outline-primary btn-lg" href="/register"
-                       th:if="${session.loggedInUser == null}">Create an account</a>
+                       th:if="${session.loggedInUser == null}">Sign Up</a>
                     <a class="btn btn-outline-primary btn-lg" href="/dashboard"
                        th:if="${session.loggedInUser != null}">Open your dashboard</a>
                 </div>

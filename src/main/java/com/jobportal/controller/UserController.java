@@ -25,20 +25,38 @@ import com.jobportal.dto.UserResponse;
 import com.jobportal.model.User;
 import com.jobportal.model.UserRole;
 import com.jobportal.services.UserService;
+import com.jobportal.services.RegistrationVerificationService;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
     private final UserService userService;
+    private final RegistrationVerificationService registrationVerificationService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, RegistrationVerificationService registrationVerificationService) {
         this.userService = userService;
+        this.registrationVerificationService = registrationVerificationService;
     }
 
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public UserResponse registerUser(@RequestBody @NonNull User user) {
-        return UserResponse.from(userService.registerUser(user));
+    public ResponseEntity<Map<String, String>> registerUser(@RequestBody @NonNull User user) {
+        registrationVerificationService.startRegistration(user.getName(), user.getEmail(), user.getPassword());
+        return ResponseEntity.accepted().body(Map.of("message", "If the details can be used, a verification code has been sent."));
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<UserResponse> verifyEmail(@RequestBody Map<String, String> request) {
+        User verified = registrationVerificationService.verify(request.get("email"), request.get("otp"));
+        verified.setPassword(null);
+        return ResponseEntity.ok(UserResponse.from(verified));
+    }
+
+    @PostMapping("/verify-email/resend")
+    public ResponseEntity<Map<String, String>> resendVerificationEmail(@RequestBody Map<String, String> request) {
+        registrationVerificationService.resendOtp(request.get("email"));
+        return ResponseEntity.accepted().body(Map.of("message",
+                "If this address has an eligible pending sign-up, it will receive a verification code."));
     }
 
     @PostMapping("/login")

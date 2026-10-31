@@ -4,12 +4,14 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.jobportal.model.User;
 import com.jobportal.model.UserRole;
 import com.jobportal.config.OAuthClientRegistrationRepository;
 import com.jobportal.services.UserService;
+import com.jobportal.services.RegistrationVerificationService;
 
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,11 +21,14 @@ public class HtmlUserController {
 
     private final UserService userService;
     private final OAuthClientRegistrationRepository oauthClientRegistrationRepository;
+    private final RegistrationVerificationService registrationVerificationService;
 
     public HtmlUserController(UserService userService,
-            OAuthClientRegistrationRepository oauthClientRegistrationRepository) {
+            OAuthClientRegistrationRepository oauthClientRegistrationRepository,
+            RegistrationVerificationService registrationVerificationService) {
         this.userService = userService;
         this.oauthClientRegistrationRepository = oauthClientRegistrationRepository;
+        this.registrationVerificationService = registrationVerificationService;
     }
 
     @PostMapping("/register")
@@ -32,16 +37,49 @@ public class HtmlUserController {
             Model model,
             RedirectAttributes redirectAttributes) {
 
-        String registrationResult = userService.registerNewUser(user);
-        if ("success".equals(registrationResult)) {
-            redirectAttributes.addFlashAttribute("message", "Registration successful! Please log in.");
-            return "redirect:/login";
+        try {
+            registrationVerificationService.startRegistration(user.getName(), user.getEmail(), user.getPassword());
+            redirectAttributes.addAttribute("email", user.getEmail().trim());
+            return "redirect:/verify-email";
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            model.addAttribute("error", ex.getMessage());
+            User safeUser = new User();
+            safeUser.setName(user.getName());
+            safeUser.setEmail(user.getEmail());
+            model.addAttribute("user", safeUser);
+            addOAuthAvailability(model);
+            return "register";
         }
+    }
 
-        model.addAttribute("error", registrationResult);
-        model.addAttribute("user", user);
-        addOAuthAvailability(model);
-        return "register";
+    @PostMapping("/verify-email")
+    public String verifyEmail(@RequestParam String email,
+            @RequestParam String otp, Model model,
+            RedirectAttributes redirectAttributes) {
+        try {
+            registrationVerificationService.verify(email, otp);
+            redirectAttributes.addFlashAttribute("message", "Your email is verified. You can now sign in.");
+            return "redirect:/login";
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("email", email);
+            model.addAttribute("error", ex.getMessage());
+            return "verify-email";
+        }
+    }
+
+    @PostMapping("/verify-email/resend")
+    public String resendVerificationEmail(@RequestParam String email,
+            RedirectAttributes redirectAttributes) {
+        try {
+            registrationVerificationService.resendOtp(email);
+            redirectAttributes.addAttribute("email", email);
+            redirectAttributes.addFlashAttribute("message",
+                    "If this address has an eligible pending sign-up, it will receive a verification code.");
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            redirectAttributes.addAttribute("email", email);
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/verify-email";
     }
 
     @PostMapping("/login")
@@ -68,7 +106,9 @@ public class HtmlUserController {
         }
 
         model.addAttribute("error", "Invalid email or password");
-        model.addAttribute("user", user);
+        User safeUser = new User();
+        safeUser.setEmail(user.getEmail());
+        model.addAttribute("user", safeUser);
         addOAuthAvailability(model);
         return "login";
     }

@@ -5,6 +5,7 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +23,17 @@ public class OAuthLoginFailureHandler implements AuthenticationFailureHandler {
             HttpServletRequest request,
             HttpServletResponse response,
             AuthenticationException exception) throws IOException, ServletException {
-        LOGGER.warn("Social sign-in failed: {}", exception.getClass().getSimpleName());
+        OAuthFailureReason reason = reasonFor(exception);
+        LOGGER.warn("OAuth sign-in failed reason={} exceptionClass={}",
+                reason, exception.getClass().getSimpleName());
         response.sendRedirect(request.getContextPath() + "/login?error=social-login");
+    }
+
+    private OAuthFailureReason reasonFor(AuthenticationException exception) {
+        if (exception instanceof OAuth2AuthenticationException oauthException
+                && "github_verified_primary_email_missing".equals(oauthException.getError().getErrorCode())) {
+            return OAuthFailureReason.GITHUB_VERIFIED_PRIMARY_EMAIL_MISSING;
+        }
+        return OAuthFailureReason.PROVIDER_OAUTH_FAILURE;
     }
 }

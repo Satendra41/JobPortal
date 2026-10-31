@@ -37,11 +37,19 @@ public class OAuthAccountService {
             String name) {
         String normalizedProvider = provider == null ? "" : provider.toLowerCase(Locale.ROOT);
         String normalizedEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        if ("google".equals(normalizedProvider)
+                && (!StringUtils.hasText(normalizedEmail) || !emailVerified)) {
+            throw new OAuthAccountProvisioningException(
+                    OAuthFailureReason.GOOGLE_EMAIL_MISSING_OR_UNVERIFIED,
+                    "A verified email is required for social sign-in.");
+        }
         if (!SUPPORTED_PROVIDERS.contains(normalizedProvider)
                 || !StringUtils.hasText(providerUserId)
                 || !StringUtils.hasText(normalizedEmail)
                 || !emailVerified) {
-            throw new OAuthAccountProvisioningException("A verified email is required for social sign-in.");
+            throw new OAuthAccountProvisioningException(
+                    OAuthFailureReason.OTHER_ACCOUNT_PROVISIONING_FAILURE,
+                    "A verified email is required for social sign-in.");
         }
 
         var existingAccount = oauthAccountRepository
@@ -49,7 +57,8 @@ public class OAuthAccountService {
         if (existingAccount.isPresent()) {
             User existingUser = existingAccount.get().getUser();
             if (!existingUser.isEnabled()) {
-                throw new OAuthAccountProvisioningException("This account is unavailable.");
+                throw new OAuthAccountProvisioningException(
+                        OAuthFailureReason.LINKED_ACCOUNT_DISABLED, "This account is unavailable.");
             }
             return existingUser;
         }
@@ -57,6 +66,7 @@ public class OAuthAccountService {
         List<User> matchingUsers = userRepository.findAllByEmailIgnoreCase(normalizedEmail);
         if (!matchingUsers.isEmpty()) {
             throw new OAuthAccountProvisioningException(
+                    OAuthFailureReason.EXISTING_EMAIL_ACCOUNT_COLLISION,
                     "This email is already associated with an account. Sign in using its existing method.");
         }
 
@@ -65,6 +75,7 @@ public class OAuthAccountService {
         user.setEmail(normalizedEmail);
         user.setRole(UserRole.JOB_SEEKER);
         user.setEnabled(true);
+        user.setEmailVerified(true);
         User savedUser = userRepository.saveAndFlush(user);
         oauthAccountRepository.save(new OAuthAccount(normalizedProvider, providerUserId, savedUser));
         return savedUser;

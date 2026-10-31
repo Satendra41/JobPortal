@@ -27,6 +27,9 @@ public class User{
 
     private Boolean enabled = true;
 
+    // Null values are treated as verified so existing database rows remain sign-in capable.
+    private Boolean emailVerified = true;
+
     public Long getId() {
         return id;
     }
@@ -73,5 +76,13 @@ public class User{
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified == null || emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 }

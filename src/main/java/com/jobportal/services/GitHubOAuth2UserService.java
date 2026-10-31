@@ -66,7 +66,7 @@ public class GitHubOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     private OAuth2AuthenticationException missingVerifiedEmail() {
         return new OAuth2AuthenticationException(
-                new OAuth2Error("invalid_user_info"),
+                new OAuth2Error("github_verified_primary_email_missing"),
                 "A verified primary email address is required for GitHub sign-in.");
     }
 }

@@ -48,6 +48,12 @@ public class PageController {
         return "register";
     }
 
+    @GetMapping("/verify-email")
+    public String verifyEmailPage(@RequestParam(required = false) String email, Model model) {
+        model.addAttribute("email", email == null ? "" : email);
+        return "verify-email";
+    }
+
     @GetMapping("/login")
     public String login(Model model, @RequestParam(required = false) String error) {
         model.addAttribute("user", new com.jobportal.model.User());

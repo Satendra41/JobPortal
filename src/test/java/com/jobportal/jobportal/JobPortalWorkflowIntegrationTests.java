@@ -65,6 +65,8 @@ import com.jobportal.repository.UserRepository;
 import com.jobportal.services.ProfileService;
 import com.jobportal.services.ApplicationService;
 import com.jobportal.services.UserService;
+import com.jobportal.services.RegistrationEmailSender;
+import com.jobportal.repository.PendingRegistrationRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -112,6 +114,12 @@ class JobPortalWorkflowIntegrationTests {
 
     @Autowired
     private UserService userService;
+
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private RegistrationEmailSender registrationEmailSender;
+
+    @Autowired
+    private PendingRegistrationRepository pendingRegistrationRepository;
 
     private final List<Long> createdUserIds = new ArrayList<>();
     private final List<Long> createdJobIds = new ArrayList<>();
@@ -229,14 +237,12 @@ class JobPortalWorkflowIntegrationTests {
                         .content("""
                                 {"id":999999,"name":"New user","email":"%s","password":"test-password","role":"ADMIN"}
                                 """.formatted(email)))
-                .andExpect(status().isOk())
-                .andExpect(contentContains("JOB_SEEKER"))
+                .andExpect(status().isAccepted())
+                .andExpect(contentContains("verification code"))
                 .andExpect(contentDoesNotContain("password"));
 
-        User registered = userRepository.findAllByEmail(email).stream().findFirst().orElseThrow();
-        createdUserIds.add(registered.getId());
-        assertEquals(UserRole.JOB_SEEKER, registered.getRole());
-        assertTrue(registered.getId() != 999999L);
+        assertTrue(userRepository.findAllByEmailIgnoreCase(email).isEmpty());
+        assertTrue(pendingRegistrationRepository.findFirstByEmailIgnoreCase(email).isPresent());
     }
 
     @Test
@@ -253,7 +259,7 @@ class JobPortalWorkflowIntegrationTests {
                         .param("role", UserRole.ADMIN.name())
                         .param("enabled", "false"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login"));
+                .andExpect(result -> assertTrue(result.getResponse().getRedirectedUrl().startsWith("/verify-email?email=")));
 
         User unchanged = userRepository.findById(original.getId()).orElseThrow();
         assertEquals(originalName, unchanged.getName());
@@ -262,12 +268,9 @@ class JobPortalWorkflowIntegrationTests {
         assertTrue(unchanged.isEnabled());
         assertTrue(TEST_PASSWORD_ENCODER.matches("password", unchanged.getPassword()));
 
-        User registered = userRepository.findAllByEmail(testRunId + ".separate-registration@example.com")
-                .stream().findFirst().orElseThrow();
-        createdUserIds.add(registered.getId());
-        assertNotEquals(original.getId(), registered.getId());
-        assertEquals(UserRole.JOB_SEEKER, registered.getRole());
-        assertTrue(registered.isEnabled());
+        assertTrue(userRepository.findAllByEmailIgnoreCase(testRunId + ".separate-registration@example.com").isEmpty());
+        assertTrue(pendingRegistrationRepository.findFirstByEmailIgnoreCase(
+                testRunId + ".separate-registration@example.com").isPresent());
     }
 
     @Test
@@ -275,26 +278,11 @@ class JobPortalWorkflowIntegrationTests {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         String registrationPassword = "registration-test-password";
 
-        User apiRegistration = new User();
-        apiRegistration.setName(testRunId + " API password user");
-        apiRegistration.setEmail(testRunId + ".api-password@example.com");
-        apiRegistration.setPassword(registrationPassword);
-        User registeredApiUser = userService.registerUser(apiRegistration);
-        createdUserIds.add(registeredApiUser.getId());
-
-        String storedApiPassword = userRepository.findById(registeredApiUser.getId()).orElseThrow().getPassword();
-        assertTrue(encoder.matches(registrationPassword, storedApiPassword));
-        assertNotNull(userService.authenticateUser(registeredApiUser.getEmail(), registrationPassword));
-        assertNull(userService.authenticateUser(registeredApiUser.getEmail(), "wrong-test-password"));
-
-        User formRegistration = new User();
-        formRegistration.setName(testRunId + " Form password user");
-        formRegistration.setEmail(testRunId + ".form-password@example.com");
-        formRegistration.setPassword(registrationPassword);
-        assertEquals("success", userService.registerNewUser(formRegistration));
-        User registeredFormUser = userRepository.findAllByEmail(formRegistration.getEmail()).get(0);
-        createdUserIds.add(registeredFormUser.getId());
-        assertTrue(encoder.matches(registrationPassword, registeredFormUser.getPassword()));
+        User verifiedUser = createUser("verified-password-user", UserRole.JOB_SEEKER);
+        verifiedUser.setPassword(encoder.encode(registrationPassword));
+        userRepository.save(verifiedUser);
+        assertNotNull(userService.authenticateUser(verifiedUser.getEmail(), registrationPassword));
+        assertNull(userService.authenticateUser(verifiedUser.getEmail(), "wrong-test-password"));
 
         User legacyUser = createUser("legacy-password", UserRole.JOB_SEEKER);
         legacyUser.setPassword("password");
