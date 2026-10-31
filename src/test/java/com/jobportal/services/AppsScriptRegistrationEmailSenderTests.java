@@ -1,6 +1,7 @@
 package com.jobportal.services;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
@@ -11,6 +12,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,6 +25,12 @@ class AppsScriptRegistrationEmailSenderTests {
     private static final String TEST_EMAIL = "recipient@example.test";
     private static final String TEST_OTP = "123456";
     private static final String TEST_SECRET = "test-only-secret";
+
+    @Test
+    void springConstructsTheConfiguredSenderForEachProfile() {
+        assertInstanceOf(AppsScriptRegistrationEmailSender.class, springSenderFor("prod"));
+        assertInstanceOf(SmtpRegistrationEmailSender.class, springSenderFor("local"));
+    }
 
     @Test
     void postsExistingOtpAndAcceptsExplicitSuccessResponse() {
@@ -107,6 +115,19 @@ class AppsScriptRegistrationEmailSenderTests {
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         return new TestSender(new AppsScriptRegistrationEmailSender(builder.build(),
                 new ObjectMapper(), endpoint, secret), server);
+    }
+
+    private RegistrationEmailSender springSenderFor(String profile) {
+        try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().setActiveProfiles(profile);
+            context.registerBean(RestClient.Builder.class, () -> RestClient.builder());
+            context.registerBean(ObjectMapper.class, () -> new ObjectMapper());
+            context.register(AppsScriptRegistrationEmailSender.class, SmtpRegistrationEmailSender.class);
+            context.refresh();
+
+            assertTrue(context.getBeansOfType(RegistrationEmailSender.class).size() == 1);
+            return context.getBean(RegistrationEmailSender.class);
+        }
     }
 
     private void assertEqualsSafeFailure(IllegalStateException error) {

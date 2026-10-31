@@ -7,6 +7,7 @@ import java.time.Duration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpHeaders;
@@ -30,6 +31,7 @@ public class AppsScriptRegistrationEmailSender implements RegistrationEmailSende
     private final String apiUrl;
     private final String apiSecret;
 
+    @Autowired
     public AppsScriptRegistrationEmailSender(RestClient.Builder restClientBuilder,
             ObjectMapper objectMapper,
             @Value("${app.otp-email.api-url:}") String apiUrl,
