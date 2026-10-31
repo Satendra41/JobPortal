@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 import java.util.Map;
+import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,12 +22,15 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2AuthorizationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.slf4j.LoggerFactory;
 import ch.qos.logback.classic.Logger;
@@ -234,9 +238,14 @@ class OAuthLoginIntegrationTests {
                         "private@example.com token-secret"));
         request.setRequestURI("/login/oauth2/code/google");
         var providerResponse = new MockHttpServletResponse();
+        String privateResponseBody = "private@example.com token-secret authorization-code-secret";
+        var tokenHttpException = new org.springframework.web.client.HttpClientErrorException(
+                HttpStatus.BAD_REQUEST, "Sensitive provider response", HttpHeaders.EMPTY,
+                privateResponseBody.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+        var nestedTokenException = new OAuth2AuthorizationException(
+                new OAuth2Error("invalid_client", "private@example.com secret detail", null), tokenHttpException);
         oauthLoginFailureHandler.onAuthenticationFailure(request, providerResponse,
-                new OAuth2AuthenticationException(new OAuth2Error("invalid_client"),
-                        "private@example.com authorization-code-secret"));
+                new OAuth2AuthenticationException(new OAuth2Error("invalid_token_response"), nestedTokenException));
 
         assertEquals("/login?error=social-login", githubResponse.getRedirectedUrl());
         assertEquals("/login?error=social-login", providerResponse.getRedirectedUrl());
@@ -247,8 +256,13 @@ class OAuthLoginIntegrationTests {
         String googleFailure = logs.list.get(1).getFormattedMessage();
         assertTrue(googleFailure.contains("provider=google stage=provider_callback"));
         assertTrue(googleFailure.contains(OAuthFailureReason.PROVIDER_OAUTH_FAILURE.name()));
-        assertTrue(googleFailure.contains("errorCategory=invalid_client"));
-        assertNoSensitiveData(logs, "private@example.com", "token-secret", "authorization-code-secret");
+        assertTrue(googleFailure.contains("errorCategory=invalid_token_response"));
+        assertTrue(googleFailure.contains("causeCategory=oauth_error"));
+        assertTrue(googleFailure.contains("causeErrorCategory=invalid_client"));
+        assertTrue(googleFailure.contains("httpStatus=400"));
+        assertTrue(googleFailure.contains("causeExceptionClass=OAuth2AuthorizationException"));
+        assertNoSensitiveData(logs, "private@example.com", "token-secret", "authorization-code-secret",
+                "Sensitive provider response", "secret detail");
         detachLogs(OAuthLoginFailureHandler.class, logs);
 
         mockMvc.perform(get("/login").param("error", "social-login"))
