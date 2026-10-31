@@ -227,21 +227,27 @@ class OAuthLoginIntegrationTests {
     void providerAndGithubEmailFailuresUseSafeCodesAndKeepGenericBrowserMessage() throws Exception {
         ListAppender<ILoggingEvent> logs = attachLogs(OAuthLoginFailureHandler.class);
         var request = new MockHttpServletRequest();
+        request.setRequestURI("/login/oauth2/code/github");
         var githubResponse = new MockHttpServletResponse();
         oauthLoginFailureHandler.onAuthenticationFailure(request, githubResponse,
                 new OAuth2AuthenticationException(new OAuth2Error("github_verified_primary_email_missing"),
                         "private@example.com token-secret"));
+        request.setRequestURI("/login/oauth2/code/google");
         var providerResponse = new MockHttpServletResponse();
         oauthLoginFailureHandler.onAuthenticationFailure(request, providerResponse,
-                new OAuth2AuthenticationException(new OAuth2Error("access_denied"),
+                new OAuth2AuthenticationException(new OAuth2Error("invalid_client"),
                         "private@example.com authorization-code-secret"));
 
         assertEquals("/login?error=social-login", githubResponse.getRedirectedUrl());
         assertEquals("/login?error=social-login", providerResponse.getRedirectedUrl());
-        assertTrue(logs.list.get(0).getFormattedMessage()
-                .contains(OAuthFailureReason.GITHUB_VERIFIED_PRIMARY_EMAIL_MISSING.name()));
-        assertTrue(logs.list.get(1).getFormattedMessage()
-                .contains(OAuthFailureReason.PROVIDER_OAUTH_FAILURE.name()));
+        String githubFailure = logs.list.get(0).getFormattedMessage();
+        assertTrue(githubFailure.contains("provider=github stage=provider_callback"));
+        assertTrue(githubFailure.contains(OAuthFailureReason.GITHUB_VERIFIED_PRIMARY_EMAIL_MISSING.name()));
+        assertTrue(githubFailure.contains("errorCategory=github_verified_primary_email_missing"));
+        String googleFailure = logs.list.get(1).getFormattedMessage();
+        assertTrue(googleFailure.contains("provider=google stage=provider_callback"));
+        assertTrue(googleFailure.contains(OAuthFailureReason.PROVIDER_OAUTH_FAILURE.name()));
+        assertTrue(googleFailure.contains("errorCategory=invalid_client"));
         assertNoSensitiveData(logs, "private@example.com", "token-secret", "authorization-code-secret");
         detachLogs(OAuthLoginFailureHandler.class, logs);
 
@@ -256,12 +262,33 @@ class OAuthLoginIntegrationTests {
     }
 
     @Test
+    void providerFailureDiagnosticsRedactUnknownCodesAndUnknownProviderPaths() throws Exception {
+        ListAppender<ILoggingEvent> logs = attachLogs(OAuthLoginFailureHandler.class);
+        var request = new MockHttpServletRequest();
+        request.setRequestURI("/login/oauth2/code/not-a-provider");
+        var response = new MockHttpServletResponse();
+
+        oauthLoginFailureHandler.onAuthenticationFailure(request, response,
+                new OAuth2AuthenticationException(new OAuth2Error("private@example.com"),
+                        "client-secret access-token authorization-code"));
+
+        assertEquals("/login?error=social-login", response.getRedirectedUrl());
+        String diagnostic = logs.list.get(0).getFormattedMessage();
+        assertTrue(diagnostic.contains("provider=unknown stage=provider_callback"));
+        assertTrue(diagnostic.contains("errorCategory=unavailable"));
+        assertNoSensitiveData(logs, "private@example.com", "client-secret", "access-token", "authorization-code");
+        detachLogs(OAuthLoginFailureHandler.class, logs);
+    }
+
+    @Test
     void unexpectedProvisioningFailureLogsOnlyReasonAndExceptionClass() throws Exception {
         String email = "private-provisioning-address@example.com";
         String subject = "google-provisioning-failure-" + UUID.randomUUID();
         OAuthAccountService failingService = mock(OAuthAccountService.class);
         when(failingService.authenticateOrCreate("google", subject, email, true, "Private Name"))
-                .thenThrow(new IllegalStateException("token-secret password-secret " + email));
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException(
+                        "token-secret password-secret " + email,
+                        new java.sql.SQLException("private database detail " + email, "23000")));
         OAuthLoginSuccessHandler handler = new OAuthLoginSuccessHandler(failingService);
         ListAppender<ILoggingEvent> logs = attachLogs(OAuthLoginSuccessHandler.class);
         var request = new MockHttpServletRequest();
@@ -273,9 +300,12 @@ class OAuthLoginIntegrationTests {
                         "email_verified", true, "name", "Private Name")));
 
         assertEquals("/login?error=social-login", response.getRedirectedUrl());
-        assertTrue(logs.list.get(0).getFormattedMessage()
-                .contains(OAuthFailureReason.OTHER_ACCOUNT_PROVISIONING_FAILURE.name()));
-        assertTrue(logs.list.get(0).getFormattedMessage().contains("exceptionClass=IllegalStateException"));
+        String diagnostic = logs.list.get(0).getFormattedMessage();
+        assertTrue(diagnostic.contains("provider=google stage=account_provisioning"));
+        assertTrue(diagnostic.contains(OAuthFailureReason.OTHER_ACCOUNT_PROVISIONING_FAILURE.name()));
+        assertTrue(diagnostic.contains("exceptionClass=DataIntegrityViolationException"));
+        assertTrue(diagnostic.contains("databaseCategory=integrity_constraint"));
+        assertTrue(diagnostic.contains("sqlState=23000"));
         assertNoSensitiveData(logs, email, "Private Name", "token-secret", "password-secret");
         detachLogs(OAuthLoginSuccessHandler.class, logs);
     }
