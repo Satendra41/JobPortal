@@ -7,8 +7,10 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.annotation.Profile;
 
 @Component
+@Profile("!prod")
 public class SmtpRegistrationEmailSender implements RegistrationEmailSender {
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final String from;

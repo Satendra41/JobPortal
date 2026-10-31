@@ -109,11 +109,13 @@ Set these in the local process environment or in Render's **Environment** settin
 | `GOOGLE_CLIENT_SECRET` | Google sign-in |
 | `GITHUB_CLIENT_ID` | GitHub sign-in |
 | `GITHUB_CLIENT_SECRET` | GitHub sign-in |
-| `MAIL_HOST` | SMTP server used to send verification messages |
+| `OTP_EMAIL_API_URL` | Deployed Google Apps Script web app URL used in the `prod` profile |
+| `OTP_EMAIL_API_SECRET` | Shared secret configured in the Apps Script deployment; keep it private |
+| `MAIL_HOST` | SMTP server used by the non-`prod` profile |
 | `MAIL_PORT` | SMTP port (defaults to `587`) |
 | `MAIL_USERNAME` | SMTP authentication username |
 | `MAIL_PASSWORD` | SMTP authentication password |
-| `MAIL_FROM` | Verified sender address for verification messages |
+| `MAIL_FROM` | Sender address used by SMTP in the non-`prod` profile |
 | `MAIL_SMTP_AUTH` | SMTP authentication toggle (defaults to `true`) |
 | `MAIL_SMTP_STARTTLS` | STARTTLS toggle (defaults to `true`) |
 | `REGISTRATION_OTP_EXPIRATION_MINUTES` | OTP lifetime in minutes (defaults to `5`) |
@@ -123,7 +125,7 @@ Set these in the local process environment or in Render's **Environment** settin
 
 Each provider is enabled only when both of its variables are non-empty. Incomplete credentials disable only that provider; normal email/password authentication remains available.
 
-Configure a real SMTP provider for email verification. Supply its host, port, authentication settings, and a sender address authorized by that provider. The application intentionally reports delivery failure when these settings are missing or SMTP rejects the message; it does not display or log verification codes. Keep SMTP credentials only in local environment variables or Render's Environment settings.
+For local development, configure SMTP as needed. In the `prod` profile, registration messages use the Apps Script HTTPS endpoint instead. The endpoint must accept a JSON POST containing `email`, `otp`, and `secret`, and respond with JSON containing `{"success":true}` after MailApp reports success. ContentService redirects to `script.googleusercontent.com` are followed with a GET. Missing configuration, HTTP errors, redirects to other hosts, malformed responses, and explicit delivery failures all cause registration to fail safely. This sender emits no request or response logs, and its error message does not contain the code, shared secret, recipient, or provider response.
 
 ### Run locally and deploy
 
