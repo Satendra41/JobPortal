@@ -43,6 +43,7 @@ public class OAuthClientRegistrationRepository implements ClientRegistrationRepo
                     .clientId(clientId)
                     .clientSecret(clientSecret)
                     .scope("openid", "profile", "email")
+                    .tokenUri("https://oauth2.googleapis.com/token")
                     .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
                     .build());
         } else if (hasPartialCredentials(clientId, clientSecret)) {

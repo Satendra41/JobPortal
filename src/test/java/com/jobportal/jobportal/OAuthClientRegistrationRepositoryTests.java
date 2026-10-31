@@ -51,6 +51,8 @@ class OAuthClientRegistrationRepositoryTests {
 
         var google = registrations.findByRegistrationId("google");
         assertTrue(registrations.isConfigured("google"));
+        assertEquals("https://oauth2.googleapis.com/token",
+                google.getProviderDetails().getTokenUri());
         assertEquals("{baseUrl}/login/oauth2/code/{registrationId}", google.getRedirectUri());
         assertEquals(Set.of("openid", "profile", "email"), google.getScopes());
     }
