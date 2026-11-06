@@ -19,8 +19,6 @@
         <button
             class="navbar-toggler"
             type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNav"
             aria-controls="navbarNav"
             aria-expanded="false"
             aria-label="Toggle navigation">
@@ -239,19 +237,66 @@
                 </th:block>
 
 
+                <li class="nav-item theme-settings-item">
+                    <details class="theme-settings">
+                        <summary aria-label="Choose theme" title="Choose theme">
+                            <span class="visually-hidden">Theme options</span>
+                            <svg class="theme-icon theme-icon-light" data-theme-icon="light" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+                            </svg>
+                            <svg class="theme-icon theme-icon-dark" data-theme-icon="dark" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"></path>
+                            </svg>
+                            <svg class="theme-icon theme-icon-system" data-theme-icon="system" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <path d="M12 3a9 9 0 0 0 0 18z"></path>
+                                <path d="M12 7v5l3 2"></path>
+                            </svg>
+                        </summary>
+                        <div class="theme-settings-panel">
+                            <fieldset>
+                                <legend>Theme</legend>
+                                <label><input type="radio" name="theme-preference" value="light"> <span>Light</span></label>
+                                <label><input type="radio" name="theme-preference" value="dark"> <span>Dark</span></label>
+                                <label><input type="radio" name="theme-preference" value="system"> <span>System</span></label>
+                            </fieldset>
+                        </div>
+                    </details>
+                </li>
+
             </ul>
 
         </div>
 
     </div>
 
-</nav>
-
+<script th:src="@{/js/theme-toggle.js}" defer></script>
 <script>
     (() => {
+        const navigation = document.currentScript.closest('nav');
+        if (!navigation) return;
+        const menuButton = navigation.querySelector('.navbar-toggler');
+        const menu = navigation.querySelector('#navbarNav');
+        const settings = navigation.querySelector('.theme-settings');
+        menuButton?.addEventListener('click', () => {
+            const expanded = menuButton.getAttribute('aria-expanded') === 'true';
+            menuButton.setAttribute('aria-expanded', String(!expanded));
+            menu?.classList.toggle('show', !expanded);
+        });
+        document.addEventListener('click', (event) => {
+            if (settings?.open && !settings.contains(event.target)) settings.open = false;
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && settings?.open) {
+                settings.open = false;
+                settings.querySelector('summary')?.focus();
+            }
+        });
+
         const normalizePath = (path) => path.replace(/\/+$/, '') || '/';
         const currentPath = normalizePath(window.location.pathname);
-        const links = Array.from(document.querySelectorAll('[data-nav-link][href]'));
+        const links = Array.from(navigation.querySelectorAll('[data-nav-link][href]'));
         const matchesRoute = (href) => {
             const targetPath = normalizePath(new URL(href, window.location.href).pathname);
             return targetPath === '/'
@@ -259,17 +304,14 @@
                 : currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
         };
         const activeLink = links.find((link) => matchesRoute(link.href));
-
-        if (activeLink) {
-            activeLink.setAttribute('aria-current', 'page');
-        } else {
-            const brand = document.querySelector('[data-nav-brand][href]');
-            if (brand && matchesRoute(brand.href)) {
-                brand.setAttribute('aria-current', 'page');
-            }
+        if (activeLink) activeLink.setAttribute('aria-current', 'page');
+        else {
+            const brand = navigation.querySelector('[data-nav-brand][href]');
+            if (brand && matchesRoute(brand.href)) brand.setAttribute('aria-current', 'page');
         }
     })();
 </script>
+</nav>
 
 </body>
 

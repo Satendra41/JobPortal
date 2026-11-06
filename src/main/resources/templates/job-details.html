@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+    <script th:src="@{/js/theme-init.js}"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${(#strings.startsWith(job.title, 'DEMO JOB — ') ? #strings.substring(job.title, 11) : job.title) + ' | JAGAQ'}">Job details | JAGAQ</title>
