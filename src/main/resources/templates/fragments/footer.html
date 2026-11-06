@@ -3,19 +3,34 @@
 <body>
 <footer th:fragment="siteFooter" class="site-footer">
     <div class="container site-footer-container">
-        <div>
+        <section class="site-footer-brand-block" aria-label="JAGAQ">
             <a class="site-footer-brand" th:href="@{/}">JAGAQ</a>
-            <p class="site-footer-copy">Connecting talent with opportunity.</p>
-        </div>
-        <nav class="site-footer-links" aria-label="Footer navigation">
-            <a th:href="@{/jobs}">Jobs</a>
+            <p class="site-footer-tagline">Connecting talent with opportunity.</p>
+            <p class="site-footer-description">A smarter place to find your next opportunity or the people who will shape your team.</p>
+        </section>
+
+        <nav class="site-footer-column" aria-label="Explore">
+            <h2 class="site-footer-heading">Explore</h2>
+            <a th:href="@{/jobs}">Browse Jobs</a>
             <a th:href="@{/about}">About</a>
             <a th:href="@{/contact}">Contact</a>
-            <a th:if="${session.loggedInUser == null}" th:href="@{/login}">Sign in</a>
         </nav>
+
+        <nav class="site-footer-column" aria-label="For Candidates">
+            <h2 class="site-footer-heading">For Candidates</h2>
+            <a th:href="@{/register}">Sign Up</a>
+            <a th:href="@{/login}">Sign In</a>
+            <a th:href="@{/applications}">My Applications</a>
+        </nav>
+
+        <nav class="site-footer-column" aria-label="For Employers">
+            <h2 class="site-footer-heading">For Employers</h2>
+            <a th:href="@{/hr/dashboard}">HR Sign In</a>
+            <a th:href="@{/hr/jobs/new}">Post a Job</a>
+        </nav>
+
         <div class="site-footer-bottom">
-            <span>&copy; 2026 JAGAQ. All rights reserved.</span>
-            <a class="site-footer-signin" th:if="${session.loggedInUser == null}" th:href="@{/register}">Sign Up</a>
+            <span>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> JAGAQ. All rights reserved.</span>
         </div>
     </div>
 </footer>

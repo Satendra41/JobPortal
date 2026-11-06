@@ -7,7 +7,7 @@
     <meta name="description" content="Search active job opportunities, manage applications, and keep your professional profile up to date with JAGAQ.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
           crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.3/css/all.min.css"
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
           crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" th:href="@{/css/styles.css}">
 </head>
@@ -38,11 +38,16 @@
                     <span>Recently added</span>
                 </div>
                 <p class="home-opportunity-label">A role to explore</p>
-                <h2 th:text="${featuredJobs[0].title}">Job title</h2>
+                <span class="badge demo-job-badge" th:if="${#strings.startsWith(featuredJobs[0].title, 'DEMO JOB')}">DEMO JOB</span>
+                <h2 th:text="${#strings.startsWith(featuredJobs[0].title, 'DEMO JOB — ') ? #strings.substring(featuredJobs[0].title, 11) : featuredJobs[0].title}">Job title</h2>
 
-                <p class="home-opportunity-company"
-                   th:if="${featuredJobs[0].company != null and !featuredJobs[0].company.isBlank()}"
-                   th:text="${featuredJobs[0].company}">Company</p>
+                <div class="home-opportunity-company-row"
+                     th:if="${featuredJobs[0].company != null and !featuredJobs[0].company.isBlank()}">
+                    <span class="job-company-avatar home-opportunity-avatar" aria-hidden="true"
+                          th:with="initialSource=${#strings.startsWith(featuredJobs[0].company, 'DEMO · ') ? #strings.substring(featuredJobs[0].company, 7) : featuredJobs[0].company}"
+                          th:text="${#strings.toUpperCase(#strings.substring(initialSource, 0, 1) + (#strings.contains(initialSource, ' ') ? #strings.substring(#strings.substringAfter(initialSource, ' '), 0, 1) : (#strings.length(initialSource) > 1 ? #strings.substring(initialSource, 1, 2) : '')))}">JA</span>
+                    <p class="home-opportunity-company" th:text="${featuredJobs[0].company}">Company</p>
+                </div>
 
                 <div class="home-opportunity-meta">
                     <span class="badge job-badge"
@@ -154,27 +159,53 @@
             <div class="col-md-6 col-xl-4" th:each="job : ${featuredJobs}">
                 <article class="card home-job-card h-100">
                     <div class="card-body">
-                        <div class="home-job-meta">
-                            <span class="badge job-badge" th:if="${job.jobType != null and !job.jobType.isBlank()}"
+                        <header class="home-job-header job-card-header">
+                            <span class="job-company-avatar" aria-hidden="true"
+                                  th:if="${job.company != null and !job.company.isBlank()}"
+                                  th:with="initialSource=${#strings.startsWith(job.company, 'DEMO · ') ? #strings.substring(job.company, 7) : job.company}"
+                                  th:text="${#strings.toUpperCase(#strings.substring(initialSource, 0, 1) + (#strings.contains(initialSource, ' ') ? #strings.substring(#strings.substringAfter(initialSource, ' '), 0, 1) : (#strings.length(initialSource) > 1 ? #strings.substring(initialSource, 1, 2) : '')))}">JA</span>
+                            <div class="home-job-title-block job-card-title-block">
+                                <span class="badge demo-job-badge" th:if="${job.title != null and #strings.startsWith(job.title, 'DEMO JOB')}">DEMO JOB</span>
+                                <h3 class="home-job-title job-card-title" th:if="${job.title != null and !job.title.isBlank()}">
+                                    <a th:href="@{'/jobs/' + ${job.id}}" th:text="${#strings.startsWith(job.title, 'DEMO JOB — ') ? #strings.substring(job.title, 11) : job.title}">Job title</a>
+                                </h3>
+                                <p class="home-job-company" th:if="${job.company != null and !job.company.isBlank()}"
+                                   th:text="${job.company}">Company</p>
+                            </div>
+                        </header>
+                        <div class="home-job-meta home-job-badges job-card-meta">
+                            <span class="badge job-badge job-meta-badge job-type-badge" th:if="${job.jobType != null and !job.jobType.isBlank()}"
                                   th:text="${job.jobType}">Full-time</span>
-                            <span class="badge text-bg-light" th:if="${job.workMode != null and !job.workMode.isBlank()}"
+                            <span class="badge text-bg-light job-meta-badge job-work-mode-badge" th:if="${job.workMode != null and !job.workMode.isBlank()}"
                                   th:text="${job.workMode}">Hybrid</span>
+                            <span class="badge job-meta-badge job-experience-badge" th:if="${job.experience != null and !job.experience.isBlank()}"
+                                  th:text="${job.experience}">Experience</span>
+                            <span class="job-meta-location" th:if="${job.location != null and !job.location.isBlank()}">
+                                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                                <span th:text="${job.location}">Location</span>
+                            </span>
                         </div>
-                        <h3 class="home-job-title">
-                            <a th:href="@{'/jobs/' + ${job.id}}" th:text="${job.title}">Job title</a>
-                        </h3>
-                        <p class="home-job-company" th:if="${job.company != null and !job.company.isBlank()}"
-                           th:text="${job.company}">Company</p>
-                        <p class="home-job-location" th:if="${job.location != null and !job.location.isBlank()}"
-                           th:text="${job.location}">Location</p>
-                        <p class="home-job-skills" th:if="${job.skills != null and !job.skills.isBlank()}"
-                           th:text="${job.skills}">Skills</p>
+                        <p class="jobs-card-description job-card-description"
+                           th:if="${job.description != null and !job.description.isBlank()}"
+                           th:text="${job.description}">Role description</p>
+                        <p class="home-job-skills" th:if="${job.skills != null and !job.skills.isBlank()}">
+                            <span class="home-job-skills-label">Skills</span>
+                            <span th:text="${job.skills}">Skills</span>
+                        </p>
                         <div class="home-job-footer">
-                            <span th:if="${job.salary != null and !job.salary.isBlank()}" th:text="${job.salary}">Salary</span>
-                            <span th:if="${job.postedDate != null}" th:text="${job.postedDate}">Posted date</span>
+                            <div class="home-job-salary job-card-salary" th:if="${job.salary != null and !job.salary.isBlank()}">
+                                <span>Salary as listed</span>
+                                <strong th:text="${job.salary}">Salary</strong>
+                            </div>
+                            <span class="home-job-date job-card-posted" th:if="${job.postedDate != null}"
+                                  th:text="${'Posted ' + #temporals.format(job.postedDate, 'dd MMM yyyy')}">Posted date</span>
                         </div>
-                        <a class="stretched-link" th:href="@{'/jobs/' + ${job.id}}"
-                           th:aria-label="'View details for ' + ${job.title}"></a>
+                        <div class="home-job-actions">
+                            <a class="btn btn-outline-primary" th:href="@{'/jobs/' + ${job.id}}">View details</a>
+                            <a class="btn btn-primary"
+                               th:if="${session.loggedInUser != null and session.loggedInUser.role.name() == 'JOB_SEEKER' and job.status != 'CLOSED'}"
+                               th:href="@{'/jobs/' + ${job.id} + '/apply'}">Apply now</a>
+                        </div>
                     </div>
                 </article>
             </div>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${job.title + ' | JAGAQ'}">Job details | JAGAQ</title>
+    <title th:text="${(#strings.startsWith(job.title, 'DEMO JOB — ') ? #strings.substring(job.title, 11) : job.title) + ' | JAGAQ'}">Job details | JAGAQ</title>
     <meta name="description" th:content="${job.description}">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
@@ -11,7 +11,7 @@
           crossorigin="anonymous">
 
     <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.3/css/all.min.css"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
           crossorigin="anonymous"
           referrerpolicy="no-referrer" />
 
@@ -35,13 +35,21 @@
                 <article class="card job-primary-card">
                     <header class="job-details-header">
                         <span class="job-details-kicker">Opportunity</span>
-                        <h1 class="job-details-title" th:text="${job.title}">Job title</h1>
-                        <p class="job-details-company" th:text="${job.company}">Company</p>
+                        <span class="badge demo-job-badge" th:if="${job.title != null and #strings.startsWith(job.title, 'DEMO JOB')}">DEMO JOB</span>
+                        <h1 class="job-details-title" th:text="${#strings.startsWith(job.title, 'DEMO JOB — ') ? #strings.substring(job.title, 11) : job.title}">Job title</h1>
+                        <div class="job-details-company-row" th:if="${job.company != null and !job.company.isBlank()}">
+                            <span class="job-company-avatar job-details-avatar" aria-hidden="true"
+                                  th:with="initialSource=${#strings.startsWith(job.company, 'DEMO · ') ? #strings.substring(job.company, 7) : job.company}"
+                                  th:text="${#strings.toUpperCase(#strings.substring(initialSource, 0, 1) + (#strings.contains(initialSource, ' ') ? #strings.substring(#strings.substringAfter(initialSource, ' '), 0, 1) : (#strings.length(initialSource) > 1 ? #strings.substring(initialSource, 1, 2) : '')))}">JA</span>
+                            <p class="job-details-company" th:text="${job.company}">Company</p>
+                        </div>
                         <div class="job-details-overview">
-                            <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span th:text="${job.location}">Location</span></span>
-                            <span class="badge job-badge" th:text="${job.jobType}">Full-time</span>
-                            <span class="badge text-bg-light" th:if="${job.workMode != null and !job.workMode.isBlank()}"
+                            <span class="job-details-location" th:if="${job.location != null and !job.location.isBlank()}"><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span th:text="${job.location}">Location</span></span>
+                            <span class="badge job-badge job-meta-badge job-type-badge" th:if="${job.jobType != null and !job.jobType.isBlank()}" th:text="${job.jobType}">Full-time</span>
+                            <span class="badge text-bg-light job-meta-badge job-work-mode-badge" th:if="${job.workMode != null and !job.workMode.isBlank()}"
                                   th:text="${job.workMode}">Work mode</span>
+                            <span class="badge job-meta-badge job-experience-badge" th:if="${job.experience != null and !job.experience.isBlank()}"
+                                  th:text="${job.experience}">Experience</span>
                         </div>
                     </header>
 

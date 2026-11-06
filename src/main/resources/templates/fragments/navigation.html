@@ -10,7 +10,7 @@
     <div class="container">
 
         <!-- Brand -->
-        <a class="navbar-brand" th:href="${brandHref}" th:text="${brandText}">
+        <a class="navbar-brand" data-nav-brand th:href="${brandHref}" th:text="${brandText}">
             JAGAQ
         </a>
 
@@ -50,37 +50,37 @@
                     th:if="${session.loggedInUser == null}">
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/">
+                        <a class="nav-link" data-nav-link href="/">
                             Home
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/jobs">
+                        <a class="nav-link" data-nav-link href="/jobs">
                             Jobs
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/about">
+                        <a class="nav-link" data-nav-link href="/about">
                             About
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/contact">
+                        <a class="nav-link" data-nav-link href="/contact">
                             Contact
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/login">
+                        <a class="nav-link" data-nav-link href="/login">
                             Login
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/register">
+                        <a class="nav-link" data-nav-link href="/register">
                             Sign Up
                         </a>
                     </li>
@@ -96,43 +96,43 @@
                     th:if="${session.loggedInUser != null and session.loggedInUser.role.name() == 'JOB_SEEKER'}">
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/">
+                        <a class="nav-link" data-nav-link href="/">
                             Home
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/jobs">
+                        <a class="nav-link" data-nav-link href="/jobs">
                             Jobs
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/dashboard">
+                        <a class="nav-link" data-nav-link href="/dashboard">
                             Dashboard
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/profile">
+                        <a class="nav-link" data-nav-link href="/profile">
                             Profile
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/applications">
+                        <a class="nav-link" data-nav-link href="/applications">
                             My Applications
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/saved-jobs">
+                        <a class="nav-link" data-nav-link href="/saved-jobs">
                             Saved Jobs
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/job-alerts">
+                        <a class="nav-link" data-nav-link href="/job-alerts">
                             Job Alerts
                         </a>
                     </li>
@@ -154,38 +154,38 @@
                     th:if="${session.loggedInUser != null and session.loggedInUser.role.name() == 'HR'}">
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/">
+                        <a class="nav-link" data-nav-link href="/">
                             Home
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/jobs">
+                        <a class="nav-link" data-nav-link href="/jobs">
                             Jobs
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/hr/dashboard">
+                        <a class="nav-link" data-nav-link href="/hr/dashboard">
                             HR Dashboard
                         </a>
                     </li>
 
                     <!-- Company Profile -->
                     <li class="nav-item">
-                        <a class="nav-link" href="/hr/company-profile">
+                        <a class="nav-link" data-nav-link href="/hr/company-profile">
                             Company Profile
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/hr/jobs">
+                        <a class="nav-link" data-nav-link href="/hr/jobs">
                             My Jobs
                         </a>
                     </li>
 
                     <li class="nav-item" th:if="${job != null and job.id != null and contextHref == ''}">
-                        <a class="nav-link" th:href="@{'/hr/jobs/' + ${job.id} + '/applications'}">
+                        <a class="nav-link" data-nav-link th:href="@{'/hr/jobs/' + ${job.id} + '/applications'}">
                             Applicants
                         </a>
                     </li>
@@ -207,25 +207,25 @@
                     th:if="${session.loggedInUser != null and session.loggedInUser.role.name() == 'ADMIN'}">
 
                     <li class="nav-item" th:if="${brandHref != '/admin/dashboard'}">
-                        <a class="nav-link" href="/admin/dashboard">
+                        <a class="nav-link" data-nav-link href="/admin/dashboard">
                             Admin Dashboard
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/admin/users">
+                        <a class="nav-link" data-nav-link href="/admin/users">
                             Users
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/admin/jobs">
+                        <a class="nav-link" data-nav-link href="/admin/jobs">
                             Jobs
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="/admin/applications">
+                        <a class="nav-link" data-nav-link href="/admin/applications">
                             Applications
                         </a>
                     </li>
@@ -246,6 +246,30 @@
     </div>
 
 </nav>
+
+<script>
+    (() => {
+        const normalizePath = (path) => path.replace(/\/+$/, '') || '/';
+        const currentPath = normalizePath(window.location.pathname);
+        const links = Array.from(document.querySelectorAll('[data-nav-link][href]'));
+        const matchesRoute = (href) => {
+            const targetPath = normalizePath(new URL(href, window.location.href).pathname);
+            return targetPath === '/'
+                ? currentPath === '/'
+                : currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
+        };
+        const activeLink = links.find((link) => matchesRoute(link.href));
+
+        if (activeLink) {
+            activeLink.setAttribute('aria-current', 'page');
+        } else {
+            const brand = document.querySelector('[data-nav-brand][href]');
+            if (brand && matchesRoute(brand.href)) {
+                brand.setAttribute('aria-current', 'page');
+            }
+        }
+    })();
+</script>
 
 </body>
 

@@ -27,11 +27,11 @@
                         <tr th:each="app : ${applications}">
                             <td class="admin-primary-cell" data-label="Applicant" th:text="${app.applicantName}">Applicant</td>
                             <td data-label="Email" th:text="${app.applicantEmail}">Email</td>
-                            <td data-label="Job" th:text="${jobMap[app.jobId]?.title}">Job</td>
+                            <td data-label="Job"><span class="badge demo-job-badge" th:if="${jobMap[app.jobId] != null and jobMap[app.jobId].title != null and #strings.startsWith(jobMap[app.jobId].title, 'DEMO JOB')}">DEMO JOB</span> <span th:text="${jobMap[app.jobId] != null and #strings.startsWith(jobMap[app.jobId].title, 'DEMO JOB — ') ? #strings.substring(jobMap[app.jobId].title, 11) : jobMap[app.jobId]?.title}">Job</span></td>
                             <td data-label="Company" th:text="${jobMap[app.jobId]?.company}">Company</td>
                             <td data-label="Applied date" th:text="${app.appliedDate}">Date</td>
                             <td data-label="Status">
-                                <span class="badge admin-application-status"
+                                <span class="badge application-status-badge admin-application-status"
                                       th:classappend="${app.status == 'APPLIED' ? 'bg-primary' : (app.status == 'SHORTLISTED' ? 'bg-info text-dark' : (app.status == 'INTERVIEW' ? 'bg-warning text-dark' : (app.status == 'SELECTED' ? 'bg-success' : 'bg-danger')))}"
                                       th:text="${app.status}">APPLIED</span>
                             </td>

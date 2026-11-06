@@ -25,7 +25,7 @@
                     <thead><tr><th scope="col">Title</th><th scope="col">Company</th><th scope="col">Location</th><th scope="col">Owner</th><th scope="col">Status</th><th scope="col">Posted</th><th scope="col">Action</th></tr></thead>
                     <tbody>
                         <tr th:each="job : ${jobs}">
-                            <td class="admin-primary-cell" data-label="Title" th:text="${job.title}">Title</td>
+                            <td class="admin-primary-cell" data-label="Title"><span class="badge demo-job-badge" th:if="${job.title != null and #strings.startsWith(job.title, 'DEMO JOB')}">DEMO JOB</span> <span th:text="${#strings.startsWith(job.title, 'DEMO JOB — ') ? #strings.substring(job.title, 11) : job.title}">Title</span></td>
                             <td data-label="Company" th:text="${job.company}">Company</td>
                             <td data-label="Location" th:text="${job.location}">Location</td>
                             <td data-label="Owner" th:text="${job.ownerId == null or userMap[job.ownerId] == null ? 'Legacy job' : userMap[job.ownerId].name}">Owner</td>
