@@ -13,6 +13,10 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,6 +26,7 @@ import com.jobportal.model.PasswordResetOutboxJob;
 /** Encrypts reset email payloads before they are written to the outbox table. */
 @Component
 public class PasswordResetOutboxCipher {
+    private static final Logger logger = LoggerFactory.getLogger(PasswordResetOutboxCipher.class);
     private static final int NONCE_BYTES = 12;
     private static final int TAG_BITS = 128;
     private static final Pattern KEY_ID = Pattern.compile("[A-Za-z0-9._-]{1,64}");
@@ -33,10 +38,23 @@ public class PasswordResetOutboxCipher {
 
     public PasswordResetOutboxCipher(ObjectMapper objectMapper,
             @Value("${app.password-reset.outbox.encryption-keys:}") String configuredKeys,
-            @Value("${app.password-reset.outbox.active-key-id:}") String activeKeyId) {
+            @Value("${app.password-reset.outbox.active-key-id:}") String activeKeyId,
+            Environment environment) {
         this.objectMapper = objectMapper;
         this.keys = parseKeys(configuredKeys);
         this.activeKeyId = activeKeyId == null ? "" : activeKeyId.trim();
+        if (environment.acceptsProfiles(Profiles.of("prod"))) {
+            if (keys.isEmpty()) {
+                throw new IllegalStateException("Missing or invalid PASSWORD_RESET_OUTBOX_ENCRYPTION_KEYS: "
+                        + "configure one or more keyId=Base64(32-byte-key) entries.");
+            }
+            if (!keys.containsKey(this.activeKeyId)) {
+                throw new IllegalStateException("PASSWORD_RESET_OUTBOX_ACTIVE_KEY_ID must match a key ID in "
+                        + "PASSWORD_RESET_OUTBOX_ENCRYPTION_KEYS.");
+            }
+            logger.info("Password reset outbox encryption configuration is valid ({} key(s); values hidden).",
+                    keys.size());
+        }
     }
 
     public EncryptedPayload encrypt(String jobId, PasswordResetOutboxJob.Type type,
