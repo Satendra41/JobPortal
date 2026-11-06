@@ -43,7 +43,6 @@
                         <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
                         <form th:action="@{/applications/submit}" th:object="${application}" method="post" enctype="multipart/form-data">
                             <input type="hidden" th:field="*{jobId}" />
-                            <input type="hidden" th:field="*{userId}" />
                             <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="applicantName" class="form-label">Applicant name</label>
@@ -55,7 +54,9 @@
                             </div>
                             <div class="col-12">
                                 <label for="phone" class="form-label">Phone number</label>
-                                <input type="tel" class="form-control" id="phone" th:field="*{phone}" placeholder="(555) 123-4567" required>
+                                <input type="tel" class="form-control" id="phone" th:field="*{phone}" placeholder="(555) 123-4567" maxlength="30" pattern="[0-9+() .-]{7,30}" aria-describedby="phoneHelp phoneError" required>
+                                <div class="form-text" id="phoneHelp">Use 7–30 characters: digits, spaces, or common phone punctuation.</div>
+                                <div class="text-danger small" id="phoneError" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></div>
                             </div>
                             <div class="col-12">
                                 <label for="resumeFile" class="form-label">Upload Resume</label>
@@ -64,7 +65,9 @@
                             </div>
                             <div class="col-12">
                                 <label for="coverLetter" class="form-label">Cover letter</label>
-                                <textarea class="form-control" id="coverLetter" th:field="*{coverLetter}" rows="5" placeholder="Tell us why you are a great fit" required></textarea>
+                                <textarea class="form-control" id="coverLetter" th:field="*{coverLetter}" rows="5" maxlength="2000" aria-describedby="coverLetterHelp coverLetterError" placeholder="Tell us why you are a great fit"></textarea>
+                                <div class="form-text" id="coverLetterHelp">Optional. Maximum 2,000 characters.</div>
+                                <div class="text-danger small" id="coverLetterError" th:if="${#fields.hasErrors('coverLetter')}" th:errors="*{coverLetter}"></div>
                             </div>
                             </div>
                             <div class="job-application-actions">

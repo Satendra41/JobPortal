@@ -65,6 +65,7 @@ public class RegistrationVerificationService {
                 || !StringUtils.hasText(password)) {
             throw new IllegalArgumentException("Enter a valid name, email, and password.");
         }
+        PasswordPolicy.validate(password);
         String normalizedEmail = normalizeEmail(email);
         if (!userRepository.findAllByEmailIgnoreCase(normalizedEmail).isEmpty()) {
             throw new IllegalArgumentException("Unable to start sign up for this email. Check your details or sign in.");

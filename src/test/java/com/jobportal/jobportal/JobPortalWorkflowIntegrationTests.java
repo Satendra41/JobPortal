@@ -293,6 +293,147 @@ class JobPortalWorkflowIntegrationTests {
     }
 
     @Test
+    void failedLegacyPasswordLoginLeavesStoredPasswordUnchanged() {
+        User legacyUser = createUser("legacy-password-failed-login", UserRole.JOB_SEEKER);
+        String legacyPassword = "legacy-test-password";
+        legacyUser.setPassword(legacyPassword);
+        userRepository.saveAndFlush(legacyUser);
+
+        assertNull(userService.authenticateUser(legacyUser.getEmail(), "incorrect-test-password"));
+
+        assertEquals(legacyPassword,
+                userRepository.findById(legacyUser.getId()).orElseThrow().getPassword());
+    }
+
+    @Test
+    void savingNewUserWithPasswordStoresBcryptHash() {
+        User user = new User();
+        user.setName(testRunId + " new-user-password-save");
+        user.setEmail(testRunId + ".new-user-password-save@example.com");
+        user.setRole(UserRole.JOB_SEEKER);
+        String rawPassword = "new-user-save-password";
+        user.setPassword(rawPassword);
+
+        User saved = userService.save(user);
+        createdUserIds.add(saved.getId());
+
+        String storedPassword = userRepository.findById(saved.getId()).orElseThrow().getPassword();
+        assertNotNull(storedPassword);
+        assertNotEquals(rawPassword, storedPassword);
+        assertTrue(TEST_PASSWORD_ENCODER.matches(rawPassword, storedPassword));
+    }
+
+    @Test
+    void savingNewUserWithBlankPasswordIsRejectedButMissingPasswordRemainsAllowed() {
+        User blankPasswordUser = new User();
+        blankPasswordUser.setName(testRunId + " blank-password-user");
+        blankPasswordUser.setEmail(testRunId + ".blank-password-user@example.com");
+        blankPasswordUser.setPassword("   ");
+
+        assertThrows(IllegalArgumentException.class, () -> userService.save(blankPasswordUser));
+        assertTrue(userRepository.findAllByEmailIgnoreCase(blankPasswordUser.getEmail()).isEmpty());
+
+        User passwordlessUser = new User();
+        passwordlessUser.setName(testRunId + " passwordless-user");
+        passwordlessUser.setEmail(testRunId + ".passwordless-user@example.com");
+        passwordlessUser.setRole(UserRole.JOB_SEEKER);
+        User savedPasswordlessUser = userService.save(passwordlessUser);
+        createdUserIds.add(savedPasswordlessUser.getId());
+        assertNull(userRepository.findById(savedPasswordlessUser.getId()).orElseThrow().getPassword());
+    }
+
+    @Test
+    void passwordUpdateRejectsPasswordBelowMinimumWithoutChangingAccount() {
+        User user = createUser("password-update-short", UserRole.JOB_SEEKER);
+        String originalHash = userRepository.findById(user.getId()).orElseThrow().getPassword();
+        User update = passwordUpdate("Changed name", "1234567");
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> userService.updateUser(user.getId(), update));
+
+        assertEquals("Password must be at least 8 characters long.", error.getMessage());
+        User unchanged = userRepository.findById(user.getId()).orElseThrow();
+        assertEquals(user.getName(), unchanged.getName());
+        assertEquals(originalHash, unchanged.getPassword());
+    }
+
+    @Test
+    void passwordUpdateCountsUnicodeCodePointsForMinimumLength() {
+        User user = createUser("password-update-short-unicode", UserRole.JOB_SEEKER);
+        String originalHash = userRepository.findById(user.getId()).orElseThrow().getPassword();
+        String password = "😀".repeat(7);
+        assertEquals(7, password.codePointCount(0, password.length()));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> userService.updateUser(user.getId(), passwordUpdate(user.getName(), password)));
+
+        assertEquals("Password must be at least 8 characters long.", error.getMessage());
+        assertEquals(originalHash, userRepository.findById(user.getId()).orElseThrow().getPassword());
+    }
+
+    @Test
+    void passwordUpdateAcceptsEightCharactersAndStoresBcryptHash() {
+        User user = createUser("password-update-minimum", UserRole.JOB_SEEKER);
+        userService.updateUser(user.getId(), passwordUpdate(user.getName(), "12345678"));
+
+        String storedPassword = userRepository.findById(user.getId()).orElseThrow().getPassword();
+        assertTrue(TEST_PASSWORD_ENCODER.matches("12345678", storedPassword));
+    }
+
+    @Test
+    void passwordUpdateRejectsMoreThanSeventyTwoUtf8BytesWithoutChangingPassword() {
+        User user = createUser("password-update-long", UserRole.JOB_SEEKER);
+        String originalHash = userRepository.findById(user.getId()).orElseThrow().getPassword();
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> userService.updateUser(user.getId(), passwordUpdate(user.getName(), "a".repeat(73))));
+
+        assertEquals("Password must not exceed 72 UTF-8 bytes.", error.getMessage());
+        assertEquals(originalHash, userRepository.findById(user.getId()).orElseThrow().getPassword());
+    }
+
+    @Test
+    void passwordUpdateUsesUnicodeCharacterAndUtf8ByteBoundaries() {
+        User user = createUser("password-update-unicode", UserRole.JOB_SEEKER);
+        String passwordAtByteLimit = "😀".repeat(18);
+        assertEquals(18, passwordAtByteLimit.codePointCount(0, passwordAtByteLimit.length()));
+        userService.updateUser(user.getId(), passwordUpdate(user.getName(), passwordAtByteLimit));
+        String storedPassword = userRepository.findById(user.getId()).orElseThrow().getPassword();
+        assertTrue(TEST_PASSWORD_ENCODER.matches(passwordAtByteLimit, storedPassword));
+
+        String originalHash = storedPassword;
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> userService.updateUser(user.getId(), passwordUpdate(user.getName(), "😀".repeat(19))));
+
+        assertEquals("Password must not exceed 72 UTF-8 bytes.", error.getMessage());
+        assertEquals(originalHash, userRepository.findById(user.getId()).orElseThrow().getPassword());
+    }
+
+    @Test
+    void passwordUpdateRejectsClientSuppliedBcryptHashAndPreservesOmittedOrBlankPassword() {
+        User user = createUser("password-update-no-hash", UserRole.JOB_SEEKER);
+        String originalHash = userRepository.findById(user.getId()).orElseThrow().getPassword();
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> userService.updateUser(user.getId(),
+                        passwordUpdate(user.getName(), TEST_PASSWORD_ENCODER.encode("not-a-client-password"))));
+        assertEquals("Password must be provided as plain text.", error.getMessage());
+
+        userService.updateUser(user.getId(), passwordUpdate("Updated name", null));
+        userService.updateUser(user.getId(), passwordUpdate("Updated again", "   "));
+        User unchangedPassword = userRepository.findById(user.getId()).orElseThrow();
+        assertEquals("Updated again", unchangedPassword.getName());
+        assertEquals(originalHash, unchangedPassword.getPassword());
+    }
+
+    private User passwordUpdate(String name, String password) {
+        User update = new User();
+        update.setName(name);
+        update.setPassword(password);
+        return update;
+    }
+
+    @Test
     void userRestResponsesExcludePasswordsAndPutCannotChangeRoles() throws Exception {
         User seeker = createUser("api-seeker", UserRole.JOB_SEEKER);
         User otherHr = createUser("api-other-hr", UserRole.HR);
@@ -750,6 +891,56 @@ class JobPortalWorkflowIntegrationTests {
                 .andExpect(contentDoesNotContain(closedJob.getTitle()))
                 .andExpect(contentDoesNotContain("Product Designer"))
                 .andExpect(contentDoesNotContain("sample jobs"));
+    }
+
+    @Test
+    void demoBadgeRendersAcrossHomeBrowseDetailsAndSavedJobs() throws Exception {
+        Job demoJob = new Job();
+        demoJob.setTitle("DEMO JOB — Badge verification role");
+        demoJob.setCompany("DEMO · Example Studio");
+        demoJob.setLocation("Remote, India");
+        demoJob.setDescription("Clearly labelled demonstration listing.");
+        demoJob.setSalary("₹6–9 LPA (demo range)");
+        demoJob.setSkills("Java, testing");
+        demoJob.setJobType("Full-time");
+        demoJob.setWorkMode("Remote");
+        demoJob.setExperience("1–3 years");
+        demoJob.setApplicationDeadline(LocalDate.now().plusDays(30));
+        demoJob.setPostedDate(LocalDate.now());
+        demoJob.setStatus("ACTIVE");
+        demoJob.setOwnerId(null);
+        demoJob = jobRepository.save(demoJob);
+        createdJobIds.add(demoJob.getId());
+        User seeker = createUser("demo-badge-seeker", UserRole.JOB_SEEKER);
+        SavedJob savedJob = new SavedJob();
+        savedJob.setUserId(seeker.getId());
+        savedJob.setJobId(demoJob.getId());
+        savedJob.setSavedAt(LocalDateTime.now());
+        savedJobRepository.save(savedJob);
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("class=\"badge demo-job-badge\""))
+                .andExpect(contentContains(">Badge verification role</a>"))
+                .andExpect(contentContains(">ES</span>"))
+                .andExpect(contentDoesNotContain("DEMO JOB — Badge verification role"));
+        mockMvc.perform(get("/jobs"))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("class=\"badge demo-job-badge\""))
+                .andExpect(contentContains(">Badge verification role</a>"))
+                .andExpect(contentContains(">ES</span>"))
+                .andExpect(contentDoesNotContain("DEMO JOB — Badge verification role"));
+        mockMvc.perform(get("/jobs/{id}", demoJob.getId()))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("class=\"badge demo-job-badge\""))
+                .andExpect(contentContains(">Badge verification role</h1>"))
+                .andExpect(contentDoesNotContain("DEMO JOB — Badge verification role"));
+        mockMvc.perform(get("/saved-jobs").session(sessionFor(seeker)))
+                .andExpect(status().isOk())
+                .andExpect(contentContains("class=\"badge demo-job-badge\""))
+                .andExpect(contentContains(">Badge verification role</h2>"))
+                .andExpect(contentContains(">ES</span>"))
+                .andExpect(contentDoesNotContain("DEMO JOB — Badge verification role"));
     }
 
     @Test
@@ -1363,6 +1554,67 @@ class JobPortalWorkflowIntegrationTests {
     }
 
     @Test
+    void applicationFormRejectsMissingMalformedAndOverlongPhoneNumbers() throws Exception {
+        User hr = createUser("application-phone-validation-hr", UserRole.HR);
+        User seeker = createUser("application-phone-validation-seeker", UserRole.JOB_SEEKER);
+        Job job = createJob(hr, "Phone validation job");
+        String longPhone = "1".repeat(31);
+
+        assertPhoneValidationError(seeker, job, null, "Enter a phone number so the employer can contact you.");
+        assertPhoneValidationError(seeker, job, "phone-number",
+                "Enter a valid phone number using digits and common phone punctuation.");
+        assertPhoneValidationError(seeker, job, longPhone, "Phone number must be 30 characters or fewer.");
+        assertEquals(0, applicationRepository.countByJobId(job.getId()));
+    }
+
+    @Test
+    void applicationCoverLetterAllowsValidAndBlankValuesAndRejectsOverlongInput() throws Exception {
+        User hr = createUser("application-cover-validation-hr", UserRole.HR);
+        User seeker = createUser("application-cover-validation-seeker", UserRole.JOB_SEEKER);
+        Job invalidJob = createJob(hr, "Overlong cover letter job");
+        String tooLong = "x".repeat(2001);
+
+        mockMvc.perform(multipart("/applications/submit")
+                        .file(pdfFile("cover-validation.pdf", "%PDF-1.4\\nresume\\n%%EOF"))
+                        .session(sessionFor(seeker))
+                        .param("jobId", invalidJob.getId().toString())
+                        .param("phone", "555-0111")
+                        .param("coverLetter", tooLong))
+                .andExpect(status().isOk())
+                .andExpect(view().name("apply"))
+                .andExpect(model().attributeHasFieldErrors("application", "coverLetter"))
+                .andExpect(contentContains(tooLong.substring(0, 80)));
+        assertEquals(0, applicationRepository.countByJobId(invalidJob.getId()));
+
+        Job validJob = createJob(hr, "Maximum cover letter job");
+        String maximum = "x".repeat(2000);
+        mockMvc.perform(multipart("/applications/submit")
+                        .file(pdfFile("valid-cover.pdf", "%PDF-1.4\\nresume\\n%%EOF"))
+                        .session(sessionFor(seeker))
+                        .param("jobId", validJob.getId().toString())
+                        .param("phone", "555-0112")
+                        .param("coverLetter", maximum))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/applications/success"));
+        Application valid = findApplication(seeker, validJob);
+        createdApplicationIds.add(valid.getId());
+        assertEquals(maximum, valid.getCoverLetter());
+
+        Job blankJob = createJob(hr, "Blank cover letter job");
+        mockMvc.perform(multipart("/applications/submit")
+                        .file(pdfFile("blank-cover.pdf", "%PDF-1.4\\nresume\\n%%EOF"))
+                        .session(sessionFor(seeker))
+                        .param("jobId", blankJob.getId().toString())
+                        .param("phone", "555-0113")
+                        .param("coverLetter", ""))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/applications/success"));
+        Application blank = findApplication(seeker, blankJob);
+        createdApplicationIds.add(blank.getId());
+        assertTrue(blank.getCoverLetter() == null || blank.getCoverLetter().isBlank());
+    }
+
+    @Test
     void seekerCanApplyWithDocxAndHrReceivesPrivateApplicationResume() throws Exception {
         User hr = createUser("docx-resume-hr", UserRole.HR);
         User seeker = createUser("docx-resume-seeker", UserRole.JOB_SEEKER);
@@ -1372,6 +1624,7 @@ class JobPortalWorkflowIntegrationTests {
                         .file(docxFile("candidate.docx", validDocxBytes()))
                         .session(sessionFor(seeker))
                         .param("jobId", job.getId().toString())
+                        .param("phone", "555-0114")
                         .param("coverLetter", "A DOCX cover letter."))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/applications/success"));
@@ -1457,6 +1710,63 @@ class JobPortalWorkflowIntegrationTests {
     }
 
     @Test
+    void applicationDeadlineAllowsBeforeOnAndNoDeadlineButRejectsPastAndClosedJobs() throws Exception {
+        User hr = createUser("deadline-validation-hr", UserRole.HR);
+        User seeker = createUser("deadline-validation-seeker", UserRole.JOB_SEEKER);
+
+        Job beforeDeadline = createJob(hr, "Before deadline application");
+        beforeDeadline.setApplicationDeadline(LocalDate.now().plusDays(1));
+        jobRepository.save(beforeDeadline);
+        submitApplication(seeker, beforeDeadline);
+        createdApplicationIds.add(findApplication(seeker, beforeDeadline).getId());
+
+        Job onDeadline = createJob(hr, "On deadline application");
+        onDeadline.setApplicationDeadline(LocalDate.now());
+        jobRepository.save(onDeadline);
+        submitApplication(seeker, onDeadline);
+        createdApplicationIds.add(findApplication(seeker, onDeadline).getId());
+
+        Job noDeadline = createJob(hr, "No deadline application");
+        noDeadline.setApplicationDeadline(null);
+        jobRepository.save(noDeadline);
+        submitApplication(seeker, noDeadline);
+        createdApplicationIds.add(findApplication(seeker, noDeadline).getId());
+        assertEquals(3, applicationService.getApplicationsForUser(seeker.getId()).size());
+
+        Job afterDeadline = createJob(hr, "After deadline application");
+        afterDeadline.setApplicationDeadline(LocalDate.now().minusDays(1));
+        jobRepository.save(afterDeadline);
+        mockMvc.perform(multipart("/applications/submit")
+                        .file(pdfFile("past-deadline.pdf", "%PDF-1.4\npast\n%%EOF"))
+                        .session(sessionFor(seeker))
+                        .param("jobId", afterDeadline.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/jobs/" + afterDeadline.getId()))
+                .andExpect(flash().attribute("error", "The application deadline for this job has passed."));
+        assertEquals(0, applicationRepository.countByJobId(afterDeadline.getId()));
+        assertEquals(3, applicationService.getApplicationsForUser(seeker.getId()).size());
+
+        mockMvc.perform(get("/jobs/{id}/apply", afterDeadline.getId()).session(sessionFor(seeker)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/jobs/" + afterDeadline.getId()))
+                .andExpect(flash().attribute("error", "The application deadline for this job has passed."));
+
+        Job closed = createJob(hr, "Closed before deadline application");
+        closed.setApplicationDeadline(LocalDate.now().plusDays(2));
+        closed.setStatus("CLOSED");
+        jobRepository.save(closed);
+        mockMvc.perform(multipart("/applications/submit")
+                        .file(pdfFile("closed-deadline.pdf", "%PDF-1.4\nclosed\n%%EOF"))
+                        .session(sessionFor(seeker))
+                        .param("jobId", closed.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/jobs/" + closed.getId()))
+                .andExpect(flash().attribute("error", "This job is no longer accepting applications."));
+        assertEquals(0, applicationRepository.countByJobId(closed.getId()));
+        assertEquals(3, applicationService.getApplicationsForUser(seeker.getId()).size());
+    }
+
+    @Test
     void applicationConstraintRejectsDuplicateUserAndJobPairs() {
         User hr = createUser("application-unique-constraint-hr", UserRole.HR);
         User seeker = createUser("application-unique-constraint-seeker", UserRole.JOB_SEEKER);
@@ -1489,6 +1799,7 @@ class JobPortalWorkflowIntegrationTests {
                         .file(pdfFile("concurrent-application.pdf", "%PDF-1.4\nresume\n%%EOF"))
                         .session(sessionFor(seeker))
                         .param("jobId", job.getId().toString())
+                        .param("phone", "555-0115")
                         .param("coverLetter", "Concurrent submission."))
                 .andExpect(status().isOk())
                 .andExpect(view().name("job-details"))
@@ -1580,7 +1891,7 @@ class JobPortalWorkflowIntegrationTests {
     }
 
     @Test
-    void adminDashboardHandlesJobsAfterTheirOwnerAccountIsDeleted() throws Exception {
+    void adminDashboardKeepsHrOwnershipAndBlocksDeletingAJobOwner() throws Exception {
         User admin = createUser("orphan-job-admin", UserRole.ADMIN);
         User owner = createUser("deleted-job-owner", UserRole.HR);
         Job job = createJob(owner, "Job with deleted owner");
@@ -1589,8 +1900,10 @@ class JobPortalWorkflowIntegrationTests {
                         .delete("/users/{id}", owner.getId())
                         .session(sessionFor(admin))
                         .with(csrf()))
-                .andExpect(status().isOk());
-        createdUserIds.remove(owner.getId());
+                .andExpect(status().isConflict());
+
+        assertEquals(owner.getId(), jobRepository.findById(job.getId()).orElseThrow().getOwnerId());
+        assertTrue(userRepository.existsById(owner.getId()));
 
         String dashboard = mockMvc.perform(get("/admin/dashboard").session(sessionFor(admin)))
                 .andExpect(status().isOk())
@@ -1600,7 +1913,7 @@ class JobPortalWorkflowIntegrationTests {
                 .getContentAsString(StandardCharsets.UTF_8);
 
         assertTrue(dashboard.contains(job.getTitle()));
-        assertTrue(dashboard.contains("Legacy job"));
+        assertTrue(dashboard.contains(owner.getName()));
     }
 
     @Test
@@ -1851,6 +2164,7 @@ class JobPortalWorkflowIntegrationTests {
         var request = multipart("/applications/submit");
         request.session(sessionFor(seeker));
         request.param("jobId", job.getId().toString());
+        request.param("phone", "555-0116");
         request.param("coverLetter", "Validation test");
         if (file != null) {
             request.file(file);
@@ -1859,6 +2173,21 @@ class JobPortalWorkflowIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(view().name("apply"))
                 .andExpect(model().attribute("error", message));
+    }
+
+    private void assertPhoneValidationError(User seeker, Job job, String phone, String message) throws Exception {
+        var request = multipart("/applications/submit")
+                .file(pdfFile("phone-validation.pdf", "%PDF-1.4\\nresume\\n%%EOF"))
+                .session(sessionFor(seeker))
+                .param("jobId", job.getId().toString());
+        if (phone != null) {
+            request.param("phone", phone);
+        }
+        mockMvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(view().name("apply"))
+                .andExpect(model().attributeHasFieldErrors("application", "phone"))
+                .andExpect(contentContains(message));
     }
 
     private void uploadResume(User seeker) throws Exception {

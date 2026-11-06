@@ -55,9 +55,13 @@ public class PageController {
     }
 
     @GetMapping("/login")
-    public String login(Model model, @RequestParam(required = false) String error) {
+    public String login(Model model, @RequestParam(required = false) String error,
+            @RequestParam(required = false) String passwordReset) {
         model.addAttribute("user", new com.jobportal.model.User());
         addOAuthAvailability(model);
+        if ("success".equals(passwordReset)) {
+            model.addAttribute("message", "Your password has been updated. You can now sign in.");
+        }
         if ("social-login".equals(error)) {
             model.addAttribute("error",
                     "Social sign-in could not be completed. Use an account with a verified email, or sign in with your original method.");
@@ -176,7 +180,9 @@ public class PageController {
     @GetMapping({ "/jobs/{id}", "/job/{id}" })
     public String jobDetails(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes, HttpSession session) {
         var job = jobService.getJobById(id);
-        if (job == null) {
+        Object loggedInUser = session.getAttribute("loggedInUser");
+        boolean admin = loggedInUser instanceof User user && user.getRole() == UserRole.ADMIN;
+        if (job == null || (!admin && jobService.isDemoJobHiddenFromPublic(job))) {
             redirectAttributes.addFlashAttribute("error", "Job not found.");
             return "redirect:/jobs";
         }

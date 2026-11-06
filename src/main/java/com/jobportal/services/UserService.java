@@ -11,7 +11,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.jobportal.model.User;
 import com.jobportal.model.UserRole;
+import com.jobportal.repository.ApplicationRepository;
+import com.jobportal.repository.CompanyProfileRepository;
+import com.jobportal.repository.JobAlertRepository;
+import com.jobportal.repository.JobRepository;
 import com.jobportal.repository.OAuthAccountRepository;
+import com.jobportal.repository.ProfileRepository;
+import com.jobportal.repository.SavedJobRepository;
 import com.jobportal.repository.UserRepository;
 
 @Service
@@ -22,22 +28,38 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final OAuthAccountRepository oauthAccountRepository;
+    private final ApplicationRepository applicationRepository;
+    private final SavedJobRepository savedJobRepository;
+    private final ProfileRepository profileRepository;
+    private final JobAlertRepository jobAlertRepository;
+    private final CompanyProfileRepository companyProfileRepository;
+    private final JobRepository jobRepository;
 
-    public UserService(UserRepository userRepository, OAuthAccountRepository oauthAccountRepository) {
+    public UserService(UserRepository userRepository, OAuthAccountRepository oauthAccountRepository,
+            ApplicationRepository applicationRepository, SavedJobRepository savedJobRepository,
+            ProfileRepository profileRepository, JobAlertRepository jobAlertRepository,
+            CompanyProfileRepository companyProfileRepository, JobRepository jobRepository) {
         this.userRepository = userRepository;
         this.oauthAccountRepository = oauthAccountRepository;
+        this.applicationRepository = applicationRepository;
+        this.savedJobRepository = savedJobRepository;
+        this.profileRepository = profileRepository;
+        this.jobAlertRepository = jobAlertRepository;
+        this.companyProfileRepository = companyProfileRepository;
+        this.jobRepository = jobRepository;
     }
 
     public @NonNull User save(@NonNull User user) {
-        if (user.getId() != null) {
-            User stored = userRepository.findById(user.getId()).orElse(null);
-            if (stored != null) {
-                if (user.getPassword() == null || user.getPassword().isBlank()) {
-                    user.setPassword(stored.getPassword());
-                } else if (!isPasswordHash(user.getPassword())) {
-                    user.setPassword(PASSWORD_ENCODER.encode(user.getPassword()));
-                }
+        User stored = user.getId() == null ? null : userRepository.findById(user.getId()).orElse(null);
+        if (stored != null) {
+            if (user.getPassword() == null || user.getPassword().isBlank()) {
+                user.setPassword(stored.getPassword());
+            } else if (!isPasswordHash(user.getPassword())) {
+                user.setPassword(PASSWORD_ENCODER.encode(user.getPassword()));
             }
+        } else if (user.getPassword() != null) {
+            PasswordPolicy.validate(user.getPassword());
+            user.setPassword(PASSWORD_ENCODER.encode(user.getPassword()));
         }
         return userRepository.save(user);
     }
@@ -96,11 +118,27 @@ public class UserService {
         if (user == null || !user.isEnabled()) {
             return null;
         }
-        user.setPassword(null);
-        return user;
+        User sessionUser = new User();
+        sessionUser.setId(user.getId());
+        sessionUser.setName(user.getName());
+        sessionUser.setEmail(user.getEmail());
+        sessionUser.setRole(user.getRole());
+        sessionUser.setEnabled(user.isEnabled());
+        sessionUser.setEmailVerified(user.isEmailVerified());
+        sessionUser.setCredentialVersion(user.getCredentialVersion());
+        return sessionUser;
     }
 
     public User updateUser(@NonNull Long id, @NonNull User updatedUser) {
+        String requestedPassword = updatedUser.getPassword();
+        boolean passwordChangeRequested = requestedPassword != null && !requestedPassword.isBlank();
+        if (passwordChangeRequested) {
+            if (isPasswordHash(requestedPassword)) {
+                throw new IllegalArgumentException("Password must be provided as plain text.");
+            }
+            PasswordPolicy.validate(requestedPassword);
+        }
+
         Optional<User> userOptional = userRepository.findById(id);
         if (userOptional.isEmpty()) {
             return null;
@@ -108,10 +146,9 @@ public class UserService {
 
         User user = userOptional.get();
         user.setName(updatedUser.getName());
-        user.setEmail(updatedUser.getEmail());
-        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isBlank()) {
-            user.setPassword(isPasswordHash(updatedUser.getPassword()) ? updatedUser.getPassword()
-                    : PASSWORD_ENCODER.encode(updatedUser.getPassword()));
+        if (passwordChangeRequested) {
+            user.setPassword(PASSWORD_ENCODER.encode(requestedPassword));
+            user.incrementCredentialVersion();
         }
 
         return userRepository.save(user);
@@ -147,9 +184,21 @@ public class UserService {
         if (!userRepository.existsById(id)) {
             return false;
         }
+        if (hasDependentRecords(id)) {
+            return false;
+        }
         oauthAccountRepository.deleteAllByUser_Id(id);
         userRepository.deleteById(id);
         return true;
+    }
+
+    public boolean hasDependentRecords(@NonNull Long id) {
+        return applicationRepository.existsByUserId(id)
+                || savedJobRepository.countByUserId(id) > 0
+                || profileRepository.existsByUserId(id)
+                || jobAlertRepository.countByUserId(id) > 0
+                || companyProfileRepository.existsByUserId(id)
+                || jobRepository.existsByOwnerId(id);
     }
 
     private boolean isPasswordHash(String password) {

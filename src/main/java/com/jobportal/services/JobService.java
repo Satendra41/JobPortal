@@ -8,6 +8,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import com.jobportal.model.Job;
@@ -19,9 +22,11 @@ public class JobService {
     private static final Pattern SALARY_AMOUNT_PATTERN = Pattern.compile("[0-9][0-9,]*(?:\\.[0-9]+)?");
 
     private final JobRepository jobRepository;
+    private final Environment environment;
 
-    public JobService(JobRepository jobRepository) {
+    public JobService(JobRepository jobRepository, Environment environment) {
         this.jobRepository = jobRepository;
+        this.environment = environment;
     }
 
     public List<Job> getAllJobs() {
@@ -29,6 +34,9 @@ public class JobService {
     }
 
     public List<Job> getRecentPublicJobs() {
+        if (environment.acceptsProfiles(Profiles.of("prod"))) {
+            return jobRepository.findTopPublicJobsExcludingDemo("ACTIVE", PageRequest.of(0, 3));
+        }
         return jobRepository.findTop3ByStatusOrderByPostedDateDesc("ACTIVE");
     }
 
@@ -47,8 +55,22 @@ public class JobService {
 
     public List<Job> searchPublicJobs(String keyword, String location, String company, String experience,
             String workMode, String jobType, String minSalary, String maxSalary, String sort) {
-        return searchJobs(keyword, location, company, experience, "ACTIVE", workMode, jobType, minSalary, maxSalary,
-                sort);
+        List<Job> jobs = searchJobs(keyword, location, company, experience, "ACTIVE", workMode, jobType, minSalary,
+                maxSalary, sort);
+        return isProductionProfile() ? jobs.stream().filter(job -> !isDemoJob(job)).toList() : jobs;
+    }
+
+    public boolean isDemoJobHiddenFromPublic(Job job) {
+        return isProductionProfile() && isDemoJob(job);
+    }
+
+    private boolean isProductionProfile() {
+        return environment.acceptsProfiles(Profiles.of("prod"));
+    }
+
+    private boolean isDemoJob(Job job) {
+        return job != null && job.getTitle() != null
+                && job.getTitle().stripLeading().toUpperCase(Locale.ROOT).startsWith("DEMO JOB");
     }
 
     public List<Job> searchJobs(String keyword, String location, String company, String experience,

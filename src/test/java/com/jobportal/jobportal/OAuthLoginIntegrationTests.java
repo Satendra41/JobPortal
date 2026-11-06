@@ -139,6 +139,7 @@ class OAuthLoginIntegrationTests {
         assertEquals(UserRole.JOB_SEEKER, created.getRole());
         assertEquals("first.email@example.com", created.getEmail());
         assertNull(created.getPassword());
+        assertEquals(0, created.getCredentialVersion());
         assertEquals(1, oauthAccountRepository.count());
 
         created.setRole(UserRole.HR);

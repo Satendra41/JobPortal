@@ -58,7 +58,7 @@ public class SavedJobController {
             return unauthorizedRedirect(session);
         }
         Job job = jobService.getJobById(id);
-        if (job == null) {
+        if (job == null || jobService.isDemoJobHiddenFromPublic(job)) {
             redirectAttributes.addFlashAttribute("error", "Job not found.");
             return "redirect:/jobs";
         }

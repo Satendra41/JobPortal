@@ -36,7 +36,7 @@ public class LoggedInUserRefreshInterceptor implements HandlerInterceptor {
         }
 
         User currentUser = cachedUser.getId() == null ? null : userService.getEnabledUserForSession(cachedUser.getId());
-        if (currentUser == null) {
+        if (currentUser == null || cachedUser.getCredentialVersion() != currentUser.getCredentialVersion()) {
             session.invalidate();
             response.sendRedirect(request.getContextPath() + "/login");
             return false;

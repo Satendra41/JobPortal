@@ -26,6 +26,9 @@ import com.jobportal.model.User;
 import com.jobportal.model.UserRole;
 import com.jobportal.services.UserService;
 import com.jobportal.services.RegistrationVerificationService;
+import com.jobportal.services.EmailChangeVerificationService;
+import com.jobportal.services.PasswordResetClientAddressResolver;
+import com.jobportal.services.PasswordResetRequestService;
 
 @RestController
 @RequestMapping("/users")
@@ -33,10 +36,19 @@ public class UserController {
 
     private final UserService userService;
     private final RegistrationVerificationService registrationVerificationService;
+    private final EmailChangeVerificationService emailChangeVerificationService;
+    private final PasswordResetRequestService passwordResetRequestService;
+    private final PasswordResetClientAddressResolver passwordResetClientAddressResolver;
 
-    public UserController(UserService userService, RegistrationVerificationService registrationVerificationService) {
+    public UserController(UserService userService, RegistrationVerificationService registrationVerificationService,
+            EmailChangeVerificationService emailChangeVerificationService,
+            PasswordResetRequestService passwordResetRequestService,
+            PasswordResetClientAddressResolver passwordResetClientAddressResolver) {
         this.userService = userService;
         this.registrationVerificationService = registrationVerificationService;
+        this.emailChangeVerificationService = emailChangeVerificationService;
+        this.passwordResetRequestService = passwordResetRequestService;
+        this.passwordResetClientAddressResolver = passwordResetClientAddressResolver;
     }
 
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -48,7 +60,6 @@ public class UserController {
     @PostMapping("/verify-email")
     public ResponseEntity<UserResponse> verifyEmail(@RequestBody Map<String, String> request) {
         User verified = registrationVerificationService.verify(request.get("email"), request.get("otp"));
-        verified.setPassword(null);
         return ResponseEntity.ok(UserResponse.from(verified));
     }
 
@@ -57,6 +68,22 @@ public class UserController {
         registrationVerificationService.resendOtp(request.get("email"));
         return ResponseEntity.accepted().body(Map.of("message",
                 "If this address has an eligible pending sign-up, it will receive a verification code."));
+    }
+
+    @PostMapping(value = "/password-reset/request", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> requestPasswordReset(@RequestBody PasswordResetRequestPayload request,
+            HttpServletRequest servletRequest) {
+        passwordResetRequestService.requestReset(request.email(),
+                passwordResetClientAddressResolver.resolve(servletRequest));
+        return ResponseEntity.accepted().body(Map.of("message",
+                "If an account can receive a password reset link, one will be sent."));
+    }
+
+    public record PasswordResetRequestPayload(String email) {
+        @Override
+        public String toString() {
+            return "PasswordResetRequestPayload[redacted]";
+        }
     }
 
     @PostMapping("/login")
@@ -98,17 +125,49 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponse> updateUser(@PathVariable @NonNull Long id, @RequestBody @NonNull User user,
+    public ResponseEntity<?> updateUser(@PathVariable @NonNull Long id, @RequestBody @NonNull User user,
             HttpSession session) {
         User current = getCurrentUser(session);
         if (current == null || (!isAdmin(session) && !id.equals(current.getId()))) {
             return ResponseEntity.status(403).build();
         }
+
+        User existing = userService.getUserById(id);
+        if (existing == null) {
+            return ResponseEntity.notFound().build();
+        }
+        String requestedEmail = user.getEmail();
+        boolean emailChangeRequested = requestedEmail != null && !requestedEmail.isBlank()
+                && (existing.getEmail() == null || !requestedEmail.trim().equalsIgnoreCase(existing.getEmail()));
+        if (requestedEmail != null && !requestedEmail.isBlank()) {
+            emailChangeVerificationService.startEmailChange(id, requestedEmail, session);
+        }
+
         User updatedUser = userService.updateUser(id, user);
         if (updatedUser == null) {
             return ResponseEntity.notFound().build();
         }
+        if (emailChangeRequested) {
+            return ResponseEntity.accepted().body(Map.of("message",
+                    "A verification code was sent to the new address. Your current email remains active until verification."));
+        }
         return ResponseEntity.ok(UserResponse.from(updatedUser));
+    }
+
+    @PutMapping("/{id}/verify-email")
+    public ResponseEntity<UserResponse> verifyEmailChange(@PathVariable @NonNull Long id,
+            @RequestBody Map<String, String> request, HttpSession session) {
+        User current = getCurrentUser(session);
+        if (current == null || (!isAdmin(session) && !id.equals(current.getId()))) {
+            return ResponseEntity.status(403).build();
+        }
+        User verified = emailChangeVerificationService.verifyEmailChange(id, request.get("otp"), session);
+        if (id.equals(current.getId())) {
+            current.setEmail(verified.getEmail());
+            current.setEmailVerified(verified.isEmailVerified());
+            session.setAttribute("loggedInUser", current);
+        }
+        return ResponseEntity.ok(UserResponse.from(verified));
     }
 
     @DeleteMapping("/{id}")
@@ -116,7 +175,11 @@ public class UserController {
         if (!isAdmin(session)) return ResponseEntity.status(403).build();
         boolean deleted = userService.deleteUser(id);
         if (!deleted) {
-            return ResponseEntity.notFound().build();
+            if (userService.getUserById(id) == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.status(409).body(
+                    "This account has associated data and cannot be permanently deleted. Disable the account instead.");
         }
         return ResponseEntity.ok("User Deleted Successfully");
     }

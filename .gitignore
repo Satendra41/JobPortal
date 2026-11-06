@@ -1,4 +1,3 @@
-HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -31,12 +30,28 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Environment-specific secrets. Keep safe examples explicitly trackable.
+.env
+.env.*
+!.env.example
+!.env.template
+
 # Local database and uploaded private documents
 *.db
 *.sqlite
 *.sqlite3
 /uploads/
 /target/test-uploads/
+
+# Temporary and operating-system files
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
 # Local temporary files
 *.log
 compile_out.txt

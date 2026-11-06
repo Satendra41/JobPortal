@@ -7,6 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -93,6 +96,71 @@ class EmailRegistrationIntegrationTests {
         assertNull(userService.authenticateUser(email, "wrong-password"));
         assertNotNull(userService.authenticateUser(email, "strong-test-password"));
         assertThrows(IllegalArgumentException.class, () -> registrationService.verify(email, code));
+    }
+
+    @Test
+    void registrationRejectsPasswordBelowMinimumBeforeSendingOtpOrSavingPendingRegistration() {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> registrationService.startRegistration("OTP Test User", email, "1234567"));
+
+        assertEquals("Password must be at least 8 characters long.", error.getMessage());
+        assertTrue(pendingRepository.findFirstByEmailIgnoreCase(email).isEmpty());
+        verify(emailSender, never()).sendOtp(anyString(), anyString(), anyInt());
+    }
+
+    @Test
+    void registrationCountsUnicodeCodePointsForMinimumLength() {
+        String password = "😀".repeat(7);
+        assertEquals(7, password.codePointCount(0, password.length()));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> registrationService.startRegistration("OTP Test User", email, password));
+
+        assertEquals("Password must be at least 8 characters long.", error.getMessage());
+        assertTrue(pendingRepository.findFirstByEmailIgnoreCase(email).isEmpty());
+        verify(emailSender, never()).sendOtp(anyString(), anyString(), anyInt());
+    }
+
+    @Test
+    void registrationAcceptsPasswordAtEightCharacterMinimum() {
+        registrationService.startRegistration("OTP Test User", email, "12345678");
+
+        PendingRegistration pending = pendingRepository.findFirstByEmailIgnoreCase(email).orElseThrow();
+        assertTrue(new BCryptPasswordEncoder().matches("12345678", pending.getPasswordHash()));
+        verify(emailSender, times(1)).sendOtp(eq(email), anyString(), eq(5));
+    }
+
+    @Test
+    void registrationRejectsPasswordAboveSeventyTwoUtf8BytesBeforeSendingOtp() {
+        String password = "a".repeat(73);
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> registrationService.startRegistration("OTP Test User", email, password));
+
+        assertEquals("Password must not exceed 72 UTF-8 bytes.", error.getMessage());
+        assertTrue(pendingRepository.findFirstByEmailIgnoreCase(email).isEmpty());
+        verify(emailSender, never()).sendOtp(anyString(), anyString(), anyInt());
+    }
+
+    @Test
+    void registrationCountsUnicodeCharactersAndAcceptsExactlySeventyTwoUtf8Bytes() {
+        String password = "😀".repeat(18);
+        assertEquals(18, password.codePointCount(0, password.length()));
+
+        registrationService.startRegistration("OTP Test User", email, password);
+
+        PendingRegistration pending = pendingRepository.findFirstByEmailIgnoreCase(email).orElseThrow();
+        assertTrue(new BCryptPasswordEncoder().matches(password, pending.getPasswordHash()));
+    }
+
+    @Test
+    void registrationRejectsUnicodePasswordAboveSeventyTwoUtf8Bytes() {
+        String password = "😀".repeat(19);
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> registrationService.startRegistration("OTP Test User", email, password));
+
+        assertEquals("Password must not exceed 72 UTF-8 bytes.", error.getMessage());
+        assertTrue(pendingRepository.findFirstByEmailIgnoreCase(email).isEmpty());
+        verify(emailSender, never()).sendOtp(anyString(), anyString(), anyInt());
     }
 
     @Test

@@ -17,8 +17,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.validation.BindingResult;
 
 import com.jobportal.model.Application;
+import com.jobportal.model.ApplicationForm;
 import com.jobportal.model.Job;
 import com.jobportal.model.User;
 import com.jobportal.model.UserRole;
@@ -26,6 +28,7 @@ import com.jobportal.services.ApplicationService;
 import com.jobportal.services.JobService;
 import com.jobportal.services.ProfileService;
 import com.jobportal.services.SavedJobService;
+import jakarta.validation.Valid;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -54,7 +57,7 @@ public class ApplicationController {
         }
 
         Job job = jobService.getJobById(id);
-        if (job == null) {
+        if (job == null || jobService.isDemoJobHiddenFromPublic(job)) {
             redirectAttributes.addFlashAttribute("error", "Job not found.");
             return "redirect:/jobs";
         }
@@ -64,21 +67,23 @@ public class ApplicationController {
             return "redirect:/jobs/" + job.getId();
         }
 
+        if (hasDeadlinePassed(job)) {
+            redirectAttributes.addFlashAttribute("error", "The application deadline for this job has passed.");
+            return "redirect:/jobs/" + job.getId();
+        }
+
         if (applicationService.hasUserApplied(user.getId(), job.getId())) {
             model.addAttribute("alreadyAppliedMessage", "You have already applied for this job.");
             addJobDetailsModel(model, user, job);
             return "job-details";
         }
 
-        Application application = new Application();
+        ApplicationForm application = new ApplicationForm();
         application.setJobId(job.getId());
-        application.setUserId(user.getId());
         application.setApplicantName(user.getName());
         application.setApplicantEmail(user.getEmail());
         var profile = profileService.getOrCreateProfile(user.getId());
         application.setPhone(profile.getPhone());
-        application.setStatus("APPLIED");
-        application.setAppliedDate(LocalDate.now());
 
         model.addAttribute("job", job);
         model.addAttribute("application", application);
@@ -86,7 +91,8 @@ public class ApplicationController {
     }
 
     @PostMapping("/applications/submit")
-    public String submitApplication(@ModelAttribute Application submittedApplication,
+    public String submitApplication(@Valid @ModelAttribute("application") ApplicationForm submittedApplication,
+            BindingResult bindingResult,
             @RequestParam(value = "resumeFile", required = false) MultipartFile resumeFile,
             HttpSession session, Model model, RedirectAttributes redirectAttributes) {
         Object loggedInUser = session.getAttribute("loggedInUser");
@@ -94,8 +100,9 @@ public class ApplicationController {
             return "redirect:/login";
         }
 
-        Job job = jobService.getJobById(submittedApplication.getJobId());
-        if (job == null) {
+        Job job = submittedApplication.getJobId() == null
+                ? null : jobService.getJobById(submittedApplication.getJobId());
+        if (job == null || jobService.isDemoJobHiddenFromPublic(job)) {
             redirectAttributes.addFlashAttribute("error", "Job not found.");
             return "redirect:/jobs";
         }
@@ -105,10 +112,22 @@ public class ApplicationController {
             return "redirect:/jobs/" + job.getId();
         }
 
+        if (hasDeadlinePassed(job)) {
+            redirectAttributes.addFlashAttribute("error", "The application deadline for this job has passed.");
+            return "redirect:/jobs/" + job.getId();
+        }
+
         if (applicationService.hasUserApplied(user.getId(), job.getId())) {
             model.addAttribute("alreadyAppliedMessage", "You have already applied for this job.");
             addJobDetailsModel(model, user, job);
             return "job-details";
+        }
+
+        if (bindingResult.hasErrors()) {
+            submittedApplication.setJobId(job.getId());
+            submittedApplication.setApplicantName(user.getName());
+            submittedApplication.setApplicantEmail(user.getEmail());
+            return showApplicationForm(model, job, submittedApplication, null);
         }
 
         Application application = new Application();
@@ -163,7 +182,22 @@ public class ApplicationController {
         }
     }
 
+    private boolean hasDeadlinePassed(Job job) {
+        LocalDate deadline = job.getApplicationDeadline();
+        return deadline != null && deadline.isBefore(LocalDate.now());
+    }
+
     private String showApplicationForm(Model model, Job job, Application application, String error) {
+        ApplicationForm form = new ApplicationForm();
+        form.setJobId(application.getJobId());
+        form.setApplicantName(application.getApplicantName());
+        form.setApplicantEmail(application.getApplicantEmail());
+        form.setPhone(application.getPhone());
+        form.setCoverLetter(application.getCoverLetter());
+        return showApplicationForm(model, job, form, error);
+    }
+
+    private String showApplicationForm(Model model, Job job, ApplicationForm application, String error) {
         model.addAttribute("job", job);
         model.addAttribute("application", application);
         model.addAttribute("error", error);

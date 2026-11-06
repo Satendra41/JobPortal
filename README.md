@@ -1,145 +1,183 @@
-# JobPortal
+# JAGAQ Job Portal
 
-A full-stack Job Portal web application built with Java Spring Boot, MySQL, Thymeleaf, HTML, CSS, JavaScript and Bootstrap.
+JAGAQ Job Portal is a server-rendered recruitment application for job seekers, HR/recruiters, and administrators. It uses Spring Boot, Thymeleaf, and MySQL. Users can browse and manage job listings, submit applications, and manage their accounts through role-specific pages.
 
-## 📌 Project Overview
-
-JobPortal is a web-based recruitment platform connecting job seekers and recruiters.
-
-Job seekers can create profiles, upload resumes, search and apply for jobs, save jobs and track application status.
-
-HR users can create and manage jobs, manage company information, view applicants and update application status.
-
-Administrators can manage users, jobs and applications.
-
-## 🚀 Features
+## Main features
 
 ### Job Seeker
-- Registration and login
-- Profile management.
-- Search and filter jobs
-- Apply for jobs
-- Track application status
-- Save jobs
-- Job alerts
+
+- Register with email verification, sign in with email and password, or use configured Google or GitHub sign-in.
+- Maintain a profile and upload a PDF profile resume.
+- Search and filter job listings, save jobs, and configure job alerts.
+- Apply to jobs with an application-specific PDF or DOCX resume and review application status.
+- Change a verified email address and request a password reset.
 
 ### HR / Recruiter
-- HR dashboard
-- Create and edit jobs
-- Close job postings
-- View applicants
-- Update application status
-- Applicant resume access
-- Company profile management
-- Work mode selection
+
+- Manage jobs they own, including creating, editing, and closing listings.
+- Maintain a company profile and set job work mode.
+- Review applicants for their jobs, view applicant details and resumes, and update application status.
 
 ### Admin
-- Admin dashboard
-- Manage users
-- View jobs
-- View applications
 
-## 🛠️ Technology Stack
+- View a dashboard of users, jobs, and applications.
+- View users and user details; enable or disable Job Seeker and HR accounts and change their roles.
+- View jobs and applications.
 
-### Backend
-- Java
-- Spring Boot
-- Spring MVC
-- Spring Data JPA
-- Hibernate / JPA
+## Technology stack
 
-### Frontend
-- HTML5
-- CSS3
-- JavaScript
-- Thymeleaf
-- Bootstrap 5
+- Java 25 (configured in `pom.xml`)
+- Spring Boot 3.5.16
+- Spring MVC, Spring Data JPA, Hibernate, Spring Security, and Spring Security OAuth2 Client
+- Thymeleaf, HTML, CSS, JavaScript, and Bootstrap styling
+- MySQL Connector/J for the application database
+- Flyway Core and Flyway MySQL for optional SQL migrations
+- Maven Wrapper; H2 is used by tests
 
-### Database
-- MySQL
+## Project architecture
 
-### Tools
-- VS Code
-- Maven
-- Git
-- GitHub
+The application follows a conventional Spring MVC structure. Controllers handle page and form requests; services implement account, job, application, email, and resume workflows; repositories use Spring Data JPA; and model classes represent persisted records. Thymeleaf templates render HTML pages, with static CSS, JavaScript, and favicon assets under `src/main/resources/static`.
 
-## ⚙️ Requirements
+Authentication uses Spring Security and an HTTP session. Application pages apply role checks for Job Seeker, HR, and Admin actions. Local email/password registration requires email verification; Google and GitHub OAuth are optional and enabled only when each provider's client ID and secret are configured.
+
+## Folder structure
+
+```text
+src/main/java/com/jobportal/
+  config/       Security, OAuth, session, and background-worker configuration
+  controller/   MVC controllers
+  dto/          Data transfer objects
+  model/        JPA entities and role types
+  repository/   Spring Data repositories
+  services/     Business logic and integrations
+src/main/resources/
+  db/migration/ Flyway migrations V1, V2, and V3
+  static/       CSS, JavaScript, and other static assets
+  templates/    Thymeleaf pages and fragments
+  application*.properties
+src/test/java/  Unit and integration tests
+src/test/resources/ Test configuration (H2)
+```
+
+## Database overview
+
+MySQL is the configured local/application database. JPA entities cover users and profiles, jobs and applications, saved jobs and alerts, company profiles, pending registrations, OAuth accounts, and password-reset records. With the default `spring.jpa.hibernate.ddl-auto=update`, Hibernate manages the application schema; it is not a production schema migration strategy.
+
+Flyway is included but **opt-in** (`FLYWAY_ENABLED` defaults to `false`). The supplied migrations add password-reset credential versioning and token storage (V1), reset request rate-limit records (V2), and an encrypted email outbox (V3). These migrations have only been tested against isolated H2 databases. Their behavior against MySQL, especially an existing installation, has not been verified. Do not run these migrations against production.
+
+## Authentication and security
+
+- Spring Security protects form workflows and uses CSRF protection for state-changing requests.
+- Session cookies are HTTP-only and use `SameSite=Lax`; the `prod` profile sets the Secure flag. Use HTTPS for any hosted environment.
+- Passwords are stored using Spring Security's password encoder. Password rules are enforced by the application.
+- Registration creates a pending account until its email verification code is accepted. Codes expire and attempts/resends are limited. Existing accounts with a null legacy email-verification value remain sign-in capable.
+- Google and GitHub OAuth require a verified provider email. OAuth accounts are matched by provider and provider user ID; automatic linking to an existing email account is not provided.
+- Configure trusted proxy address handling correctly when deployed behind a proxy. The `prod` profile trusts no forwarded-address sources by default; set `PASSWORD_RESET_TRUSTED_PROXY_REGEX` only to the exact trusted proxy range(s).
+
+## Password reset workflow
+
+The reset request endpoint queues work in a database-backed outbox. A scheduled worker applies account/client request limits, issues a single-use token with a 15-minute lifetime, and queues an encrypted email payload. Tokens are stored as digests; outbox payloads use AES-GCM encryption. Delivery retries are managed by the worker. Configure a stable, secret rate-limit hash key and an active outbox encryption key before enabling reset email delivery. Preserve encryption keys needed to read queued items during key rotation.
+
+Reset links contain the raw token in a query parameter. Before production use, configure the host or reverse proxy to redact reset-token query parameters from access logs and any request tracing or analytics. The app's safe logging does not remove the token from hosting-layer access logs.
+
+## Email verification and integrations
+
+Email/password registration uses a six-digit verification code. The default lifetime is five minutes, with configurable attempt and resend limits. In the default/local profile, email sending uses SMTP. In the `prod` profile, registration and password-reset messages use the configured Google Apps Script HTTPS endpoint. SMTP and Apps Script integrations are configurable, but **live email delivery has not been verified**.
+
+Google and GitHub sign-in are optional. Each provider is enabled only when both corresponding credentials are present. No live provider sign-in has been verified with real credentials.
+
+## Prerequisites
 
 - JDK 25
-- MySQL 8
-- Git
+- MySQL 8.x running locally
+- Windows PowerShell (commands below use the Maven Wrapper)
+- Internet access for Maven dependency downloads on the first build
 
-## 🗄️ Database Setup
+## Local installation and setup
 
-Create the database in MySQL:
+From PowerShell, open the project directory and create a local database:
+
+```powershell
+Set-Location C:\Downloads\jobportal\jobportal
+```
 
 ```sql
 CREATE DATABASE jobportal;
 ```
 
-## Social sign-in (Google and GitHub)
+Run that SQL in your local MySQL client. Then configure the process environment for the current PowerShell session (replace placeholders with your local values; do not commit secrets):
 
-The login and registration pages support Google and GitHub OAuth2 sign-in. Provider buttons remain disabled until that provider has both credentials configured; email/password sign-in continues to work without OAuth credentials.
+```powershell
+$env:DB_USERNAME = "your-local-mysql-user"
+$env:DB_PASSWORD = "your-local-mysql-password"
+```
 
-Email/password Sign Up creates a pending registration and sends a six-digit verification code. The code expires after five minutes; failed attempts and resends are limited. A user account is created only after successful verification. Existing users with no email-verification value remain sign-in capable, and OAuth-created users are marked verified based on the provider's verified-email claim.
+The local profile defaults to `jdbc:mysql://localhost:3306/jobportal`. Set `DB_URL` only if your local MySQL uses another JDBC URL. Schema tables are created/updated by Hibernate on startup with the default configuration.
 
-OAuth accounts are associated by provider and the provider's stable user ID. New accounts receive the existing `JOB_SEEKER` role. A verified email is required. If the email already belongs to an account, sign-in is rejected rather than automatically linking or changing that account. The user must sign in with the original method; account linking is not currently offered.
+## Environment variables and configuration
 
-### Provider setup
+Configuration is read from `application.properties` and profile-specific property files. The default profile is `local`; `application-prod.properties` overrides the database URL, session cookie security, forwarded-header behavior, and password-reset settings.
 
-Create OAuth credentials in each provider's developer console, then register these redirect/callback URLs:
-
-| Environment | Google authorized redirect URI | GitHub callback URL |
-|---|---|---|
-| Local default port | `http://localhost:8080/login/oauth2/code/google` | `http://localhost:8080/login/oauth2/code/github` |
-| Render production | `https://jobportal-ww3c.onrender.com/login/oauth2/code/google` | `https://jobportal-ww3c.onrender.com/login/oauth2/code/github` |
-
-The callbacks use Spring Security's standard `/login/oauth2/code/{registrationId}` endpoint. Google requests the `openid`, `profile`, and `email` scopes. GitHub requests only `user:email` and uses its authenticated email endpoint to require the primary verified address.
-
-If Google reports `invalid_client` / "The OAuth client was not found," first verify that Render's `GOOGLE_CLIENT_ID` is the active Web application OAuth client ID from the same Google Cloud project as `GOOGLE_CLIENT_SECRET`. The application reads those exact environment-variable names and builds the standard Google callback; the repository does not contain or validate the live Render values. A deleted or incorrect client ID is the likely cause of Google's "client not found" response. A callback mismatch is a separate Google Console error and should be checked against the exact HTTPS callback in the table above.
-
-### Environment variables
-
-Set these in the local process environment or in Render's **Environment** settings. Do not commit credentials or paste them into application files.
-
-| Variable | Required for |
+| Variable | Purpose |
 |---|---|
-| `GOOGLE_CLIENT_ID` | Google sign-in |
-| `GOOGLE_CLIENT_SECRET` | Google sign-in |
-| `GITHUB_CLIENT_ID` | GitHub sign-in |
-| `GITHUB_CLIENT_SECRET` | GitHub sign-in |
-| `OTP_EMAIL_API_URL` | Deployed Google Apps Script web app URL used in the `prod` profile |
-| `OTP_EMAIL_API_SECRET` | Shared secret configured in the Apps Script deployment; keep it private |
-| `MAIL_HOST` | SMTP server used by the non-`prod` profile |
-| `MAIL_PORT` | SMTP port (defaults to `587`) |
-| `MAIL_USERNAME` | SMTP authentication username |
-| `MAIL_PASSWORD` | SMTP authentication password |
-| `MAIL_FROM` | Sender address used by SMTP in the non-`prod` profile |
-| `MAIL_SMTP_AUTH` | SMTP authentication toggle (defaults to `true`) |
-| `MAIL_SMTP_STARTTLS` | STARTTLS toggle (defaults to `true`) |
-| `REGISTRATION_OTP_EXPIRATION_MINUTES` | OTP lifetime in minutes (defaults to `5`) |
-| `REGISTRATION_OTP_MAX_ATTEMPTS` | Attempts allowed per code (defaults to `5`) |
-| `REGISTRATION_OTP_RESEND_COOLDOWN_SECONDS` | Minimum time between code sends (defaults to `60`) |
-| `REGISTRATION_OTP_MAX_RESENDS_PER_HOUR` | Resends allowed per hour (defaults to `5`) |
+| `DB_USERNAME`, `DB_PASSWORD` | Database credentials (required) |
+| `DB_URL` | JDBC URL; optional locally, required by the `prod` profile |
+| `PORT` | HTTP port (defaults to `8080`) |
+| `FLYWAY_ENABLED` | Enables Flyway; defaults to `false` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional Google OAuth; both are needed |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | Optional GitHub OAuth; both are needed |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` | SMTP delivery in non-`prod` profiles; port defaults to `587` |
+| `MAIL_SMTP_AUTH`, `MAIL_SMTP_STARTTLS` | SMTP options; both default to `true` |
+| `OTP_EMAIL_API_URL`, `OTP_EMAIL_API_SECRET` | Apps Script delivery in `prod`; URL and shared secret are required for delivery |
+| `REGISTRATION_OTP_EXPIRATION_MINUTES` | Verification-code lifetime; defaults to `5` |
+| `REGISTRATION_OTP_MAX_ATTEMPTS` | Verification attempts; defaults to `5` |
+| `REGISTRATION_OTP_RESEND_COOLDOWN_SECONDS` | Resend cooldown; defaults to `60` |
+| `REGISTRATION_OTP_MAX_RESENDS_PER_HOUR` | Hourly resend limit; defaults to `5` |
+| `PASSWORD_RESET_BASE_URL` | Canonical base URL used in reset links; defaults to local URL outside `prod`, required by `prod` |
+| `PASSWORD_RESET_RATE_LIMIT_HASH_KEY` | Secret key for hashing rate-limit identifiers; required by `prod` |
+| `PASSWORD_RESET_OUTBOX_ENCRYPTION_KEYS` | Key ring for encrypting/decrypting outbox payloads; required by `prod` |
+| `PASSWORD_RESET_OUTBOX_ACTIVE_KEY_ID` | ID of the active encryption key; required by `prod` |
+| `PASSWORD_RESET_ACCOUNT_MAX_REQUESTS`, `PASSWORD_RESET_CLIENT_MAX_REQUESTS` | Reset request limits; defaults to `5` per account and `20` per client |
+| `PASSWORD_RESET_OUTBOX_WORKER_ENABLED`, `PASSWORD_RESET_OUTBOX_POLL_INTERVAL_MS` | Outbox worker controls; defaults to enabled and `5000` ms |
+| `PASSWORD_RESET_TRUSTED_PROXY_REGEX` | Exact trusted proxy address/range regex; defaults to trusting none |
+| `SESSION_COOKIE_SECURE` | Secure-cookie flag outside `prod`; defaults to `false` |
+| `DEMO_ACCOUNTS_ENABLED`, `DEMO_HR_EMAIL`, `DEMO_HR_PASSWORD`, `DEMO_ADMIN_EMAIL`, `DEMO_ADMIN_PASSWORD` | Optional demo account initialization; disabled by default |
 
-Each provider is enabled only when both of its variables are non-empty. Incomplete credentials disable only that provider; normal email/password authentication remains available.
+The `prod` profile requires explicit database and password-reset URL/key configuration; it does not supply secret values. Store secrets in the host's secret environment configuration, not in source control. The `prod` profile does not establish that the application is deployed or production-ready.
 
-For local development, configure SMTP as needed. In the `prod` profile, registration messages use the Apps Script HTTPS endpoint instead. The endpoint must accept a JSON POST containing `email`, `otp`, and `secret`, and respond with JSON containing `{"success":true}` after MailApp reports success. ContentService redirects to `script.googleusercontent.com` are followed with a GET. Missing configuration, HTTP errors, redirects to other hosts, malformed responses, and explicit delivery failures all cause registration to fail safely. This sender emits no request or response logs, and its error message does not contain the code, shared secret, recipient, or provider response.
+## How to run the application
 
-### Run locally and deploy
+With MySQL running and local database variables set, start the application from PowerShell:
 
-1. For local development, create the `jobportal` database in MySQL and set `DB_USERNAME` and `DB_PASSWORD` for that local server. The local profile defaults to the conventional local MySQL endpoint; set `DB_URL` only when using a different JDBC endpoint. For Render, activate `prod` and set `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` from the Aiven connection settings.
-2. Set either or both OAuth credential pairs in your local environment.
-3. Ensure the provider console callback uses the same host and port as the local application (the default is `http://localhost:8080`).
-4. Start the app with `.\mvnw.cmd spring-boot:run`.
-5. In Render, set the four OAuth variables as needed and set `SPRING_PROFILES_ACTIVE=prod`. The production profile retains Secure session cookies and honors forwarded HTTPS headers so Spring Security generates HTTPS callback URLs.
-6. Confirm the Render provider-console callback URLs match the table above. No OAuth secrets are required in source control.
+```powershell
+.\mvnw.cmd spring-boot:run
+```
 
-The OAuth registration table is created/updated by the existing JPA schema management. No provider login was tested against Google or GitHub without real provider credentials.
+Open `http://localhost:8080` in a browser. To stop the application, press `Ctrl+C` in the PowerShell window. Configure SMTP if you need to receive verification or password-reset email; without a working sender, those emails cannot be delivered.
 
-The new verification table and `users.email_verified` column are added by the project's existing `spring.jpa.hibernate.ddl-auto=update` schema management. Existing rows with a null `email_verified` value are treated as verified for backward compatibility. No existing user data is rewritten by the application change.
+## How to run tests
 
-### Verification
+Tests use the H2 in-memory database configuration and do not require a live MySQL server:
 
-Verified for this change: `.\mvnw.cmd test` passed all 95 tests with zero failures or errors, including OTP expiration, attempt and resend limits, verified and unverified password sign-in, Google OAuth configuration and success-session handling, and existing workflow/CSRF/role tests. Real SMTP delivery and real Google/GitHub authentication were not exercised; configure provider credentials and test them manually.
+```powershell
+.\mvnw.cmd test
+```
+
+The latest available Maven Surefire reports in `target/surefire-reports` record 189 tests, with zero failures or errors. These reports are existing build artifacts; this README update did not rerun the suite.
+
+## Database migration instructions
+
+Flyway is disabled by default. V1, V2, and V3 are provided for isolated testing of password-reset schema changes and are not validated as a MySQL upgrade path. Keep `FLYWAY_ENABLED` unset or `false` for normal local development, where Hibernate's configured `ddl-auto=update` manages schema changes. Do not enable or run these migrations against production. A reviewed, environment-specific migration and backup/rollback plan is needed before any production schema change.
+
+## Known limitations and production deployment requirements
+
+- Resume files are stored on the local filesystem under `uploads/resumes` by default, while only their stored names/paths are kept in the database. This requires persistent, private storage and backups; ephemeral hosting filesystems can lose uploads.
+- Database-backed password-reset outbox and rate-limit state require a durable database. V1, V2, and V3 have not been validated against MySQL or production data.
+- Live SMTP, Apps Script email delivery, and Google/GitHub sign-in have not been verified.
+- Reset-token query parameters must be redacted from hosting access logs before production use.
+- Production operation also requires HTTPS, correct secure-cookie and trusted-proxy settings, secret management, database migration/recovery planning, monitoring, and persistent private resume storage.
+- No deployment or production-readiness claim is made by this repository documentation.
+
+## Future improvements
+
+Before considering a hosted production deployment, validate and document a supported MySQL migration path, verify real email and OAuth integrations in controlled environments, and provide durable private resume storage with backup and retention policies.

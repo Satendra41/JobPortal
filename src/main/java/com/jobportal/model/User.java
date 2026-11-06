@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Column;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
@@ -29,6 +30,9 @@ public class User{
 
     // Null values are treated as verified so existing database rows remain sign-in capable.
     private Boolean emailVerified = true;
+
+    @Column(name = "credential_version", nullable = false)
+    private int credentialVersion = 0;
 
     public Long getId() {
         return id;
@@ -82,7 +86,23 @@ public class User{
         return emailVerified == null || emailVerified;
     }
 
+    public boolean hasExplicitlyVerifiedEmail() {
+        return Boolean.TRUE.equals(emailVerified);
+    }
+
     public void setEmailVerified(boolean emailVerified) {
         this.emailVerified = emailVerified;
+    }
+
+    public int getCredentialVersion() {
+        return credentialVersion;
+    }
+
+    public void setCredentialVersion(int credentialVersion) {
+        this.credentialVersion = credentialVersion;
+    }
+
+    public int incrementCredentialVersion() {
+        return ++credentialVersion;
     }
 }

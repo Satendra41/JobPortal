@@ -5,6 +5,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.jobportal.model.User;
@@ -12,6 +13,7 @@ import com.jobportal.model.UserRole;
 import com.jobportal.repository.UserRepository;
 
 @Component
+@Profile("local & !prod")
 @ConditionalOnProperty(name = "app.demo-accounts.enabled", havingValue = "true")
 public class AdminTestAccountInitializer implements ApplicationRunner {
 
